@@ -130,7 +130,7 @@ function MessageBubble({ msg, isMine, showSender, myUid, collectionPath }) {
           <div onDoubleClick={() => setShowPicker(v => !v)} style={{
             padding: hasMedia && !msg.text ? "4px" : "9px 14px",
             borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-            background: isMine ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "#1e293b",
+            background: isMine ? "linear-gradient(135deg,#8b5cf6,#22d3ee)" : "#1e293b",
             color: "#fff", fontSize: 14, lineHeight: 1.5, cursor: "default",
             border: isMine ? "none" : "1px solid #334155",
             overflow: "hidden",
@@ -346,7 +346,7 @@ function ProfilePage({ myProfile, friendProfiles, onSave, onClose }) {
               }} />
             </div>
           </div>
-          <button onClick={() => onSave({ nickname, bio, avatar, color, statusText, status, signature, profileBg, profileBgType })} style={{ width: "100%", background: "linear-gradient(135deg,#3b82f6,#6366f1)", border: "none", borderRadius: 10, padding: "12px", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={() => onSave({ nickname, bio, avatar, color, statusText, status, signature, profileBg, profileBgType })} style={{ width: "100%", background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", border: "none", borderRadius: 10, padding: "12px", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
             儲存設定
           </button>
         </div>
@@ -406,7 +406,7 @@ function FriendSearch({ myUid, myProfile, onClose, onSendRequest }) {
                 {u.signature && <div style={{ fontSize: 13, color: "#94a3b8", fontStyle: "italic" }}>{u.signature}</div>}
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>{u.email}</div>
               </div>
-              <button onClick={() => onSendRequest(u.uid)} style={{ background: "#3b82f6", border: "none", borderRadius: 10, padding: "9px 18px", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>加好友</button>
+              <button onClick={() => onSendRequest(u.uid)} style={{ background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 18px", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>加好友</button>
             </div>
           ))}
         </div>
@@ -482,7 +482,7 @@ function CreateGroupModal({ friends, onClose, onCreate }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {friends.map(f => (
               <button key={f.uid} onClick={() => toggle(f.uid)}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: selected.includes(f.uid) ? "#1d4ed8" : "#0f172a", border: `1px solid ${selected.includes(f.uid) ? "#3b82f6" : "#334155"}`, borderRadius: 10, cursor: "pointer", textAlign: "left", width: "100%" }}>
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: selected.includes(f.uid) ? "#7c3aed" : "#0f172a", border: `1px solid ${selected.includes(f.uid) ? "#8b5cf6" : "#334155"}`, borderRadius: 10, cursor: "pointer", textAlign: "left", width: "100%" }}>
                 <AvatarImg avatarImage={f.avatarImage} avatar={f.avatar} color={f.color} size={36} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, color: "#e2e8f0", fontSize: 14 }}>{f.nickname}</div>
@@ -497,7 +497,7 @@ function CreateGroupModal({ friends, onClose, onCreate }) {
         <button
           onClick={() => name.trim() && onCreate(name.trim(), selected)}
           disabled={!name.trim()}
-          style={{ width: "100%", background: name.trim() ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "#1e293b", border: "none", borderRadius: 10, padding: "12px", color: name.trim() ? "#fff" : "#475569", fontSize: 15, fontWeight: 700, cursor: name.trim() ? "pointer" : "default" }}>
+          style={{ width: "100%", background: name.trim() ? "linear-gradient(135deg,#8b5cf6,#22d3ee)" : "#1e293b", border: "none", borderRadius: 10, padding: "12px", color: name.trim() ? "#fff" : "#475569", fontSize: 15, fontWeight: 700, cursor: name.trim() ? "pointer" : "default" }}>
           創建群組 （{1 + selected.length} 人）
         </button>
       </div>
@@ -1065,9 +1065,9 @@ export default function ChatApp({ user }) {
     <>
       <style>{`
         @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
-        .fb:hover { background: #1e3a5f !important; }
-        .fb.act  { background: #1d4ed8 !important; }
-        .sb:hover:not(:disabled) { background: #2563eb !important; }
+        .fb:hover { background: #2e1065 !important; }
+        .fb.act  { background: #7c3aed !important; }
+        .sb:hover:not(:disabled) { background: #7c3aed !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
       `}</style>
@@ -1124,7 +1124,7 @@ export default function ChatApp({ user }) {
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
                 <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setFriendInfo(null); }}
-                  style={{ flex: 1, background: "#3b82f6", border: "none", borderRadius: 10, padding: "9px 0", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  style={{ flex: 1, background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 0", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   💬 傳訊息
                 </button>
                 <Link href={`/profile/${friendInfo.uid}`} onClick={() => setFriendInfo(null)}
@@ -1198,8 +1198,8 @@ export default function ChatApp({ user }) {
           {/* Hall button */}
           <div style={{ padding: "4px 10px 0" }}>
             <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#a855f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}># 公共大廳</div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>公開頻道</div>
@@ -1210,7 +1210,7 @@ export default function ChatApp({ user }) {
           {/* Leaderboard button */}
           <div style={{ padding: "4px 10px 6px" }}>
             <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); }} className={`fb ${showLeaderboard ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showLeaderboard ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showLeaderboard ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏆</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>打賞榜</div>
@@ -1222,8 +1222,8 @@ export default function ChatApp({ user }) {
           {/* Cinema button */}
           <div style={{ padding: "0 10px 6px" }}>
             <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); }} className={`fb ${showCinema ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCinema ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#1e3a5f,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🎬</div>
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCinema ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#4c1d95,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🎬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>電影院</div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>螢幕分享直播</div>
@@ -1242,7 +1242,7 @@ export default function ChatApp({ user }) {
               return (
                 <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); }}
                   className={`fb ${isActive ? "act" : ""}`}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
                     {group.avatar || "👥"}
                   </div>
@@ -1274,7 +1274,7 @@ export default function ChatApp({ user }) {
               <div style={{ textAlign: "center", padding: "20px 12px", color: "#475569", fontSize: 13 }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
                 還沒有好友<br />
-                <button onClick={() => setShowFriendSearch(true)} style={{ background: "none", border: "none", color: "#3b82f6", cursor: "pointer", fontSize: 13, marginTop: 6 }}>點擊搜尋加好友</button>
+                <button onClick={() => setShowFriendSearch(true)} style={{ background: "none", border: "none", color: "#a78bfa", cursor: "pointer", fontSize: 13, marginTop: 6 }}>點擊搜尋加好友</button>
               </div>
             )}
             {myFriends.map(friend => {
@@ -1283,7 +1283,7 @@ export default function ChatApp({ user }) {
                 <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); }}
                   onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, friend }); }}
                   className={`fb ${isActive ? "act" : ""}`}
-                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <AvatarImg avatarImage={friend.avatarImage} avatar={friend.avatar} color={friend.color} size={36} />
                     <span style={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10, borderRadius: "50%", background: getStatus(friend.status).color, border: "2px solid #0f172a" }} />
@@ -1389,7 +1389,7 @@ export default function ChatApp({ user }) {
                       <div style={{ fontSize: 11, color: "#64748b" }}>螢幕分享直播</div>
                     </div>
                     <button onClick={() => setShowCreateCinema(true)}
-                      style={{ marginLeft: "auto", background: "#2563eb", border: "none", borderRadius: 10, padding: "7px 16px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                      style={{ marginLeft: "auto", background: "#7c3aed", border: "none", borderRadius: 10, padding: "7px 16px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
                       + 創建房間
                     </button>
                   </div>
@@ -1413,7 +1413,7 @@ export default function ChatApp({ user }) {
                           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
                             <span style={{ background: "#ef4444", color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20, letterSpacing: 1 }}>🔴 LIVE</span>
                             <button onClick={() => joinCinemaRoom(room)}
-                              style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 10, padding: "8px 18px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                              style={{ background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", border: "none", borderRadius: 10, padding: "8px 18px", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
                               進入
                             </button>
                           </div>
@@ -1434,7 +1434,7 @@ export default function ChatApp({ user }) {
                           <button onClick={() => { setShowCreateCinema(false); setCinemaTitleInput(''); }}
                             style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "11px", color: "#94a3b8", fontSize: 14, cursor: "pointer" }}>取消</button>
                           <button onClick={createCinemaRoom}
-                            style={{ flex: 1, background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 12, padding: "11px", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>確定</button>
+                            style={{ flex: 1, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", border: "none", borderRadius: 12, padding: "11px", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>確定</button>
                         </div>
                       </div>
                     </div>
@@ -1457,7 +1457,7 @@ export default function ChatApp({ user }) {
                   <div style={{ flex: 1, background: "#000", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0 }}>
                     {isHosting && !screenStream ? (
                       <button onClick={startHostStream}
-                        style={{ background: "linear-gradient(135deg,#2563eb,#1d4ed8)", border: "none", borderRadius: 14, padding: "16px 32px", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+                        style={{ background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", border: "none", borderRadius: 14, padding: "16px 32px", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
                         ▶ 開始直播
                       </button>
                     ) : isHosting ? (
@@ -1496,7 +1496,7 @@ export default function ChatApp({ user }) {
                         placeholder="留言..."
                         style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 10, padding: "8px 12px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
                       <button className="sb" onClick={sendCinemaComment}
-                        style={{ background: "#3b82f6", border: "none", borderRadius: 10, padding: "8px 16px", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>發送</button>
+                        style={{ background: "#7c3aed", border: "none", borderRadius: 10, padding: "8px 16px", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>發送</button>
                     </div>
                   </div>
                 </div>
@@ -1545,7 +1545,7 @@ export default function ChatApp({ user }) {
                   </button>
                   <input type="text" value={hallInput} onChange={e => setHallInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendHall()} placeholder="在大廳發送訊息..."
                     style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "9px 14px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
-                  <button className="sb" onClick={sendHall} style={{ background: "#3b82f6", border: "none", borderRadius: 10, padding: "9px 16px", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>發送 ↑</button>
+                  <button className="sb" onClick={sendHall} style={{ background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 16px", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>發送 ↑</button>
                 </div>
               </div>
             </>
@@ -1594,7 +1594,7 @@ export default function ChatApp({ user }) {
                   <input type="text" value={privateInput} onChange={e => setPrivateInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendPrivate()} placeholder={`傳訊息給 ${activeFriendProfile.nickname}...`}
                     style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "9px 14px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
                   <button className="sb" onClick={sendPrivate} disabled={!privateInput.trim()}
-                    style={{ background: privateInput.trim() ? "#3b82f6" : "#1e293b", border: "none", borderRadius: 10, padding: "9px 16px", color: privateInput.trim() ? "#fff" : "#475569", cursor: privateInput.trim() ? "pointer" : "default", fontSize: 14, fontWeight: 600, transition: "all 0.15s" }}>
+                    style={{ background: privateInput.trim() ? "#7c3aed" : "#1e293b", border: "none", borderRadius: 10, padding: "9px 16px", color: privateInput.trim() ? "#fff" : "#475569", cursor: privateInput.trim() ? "pointer" : "default", fontSize: 14, fontWeight: 600, transition: "all 0.15s" }}>
                     發送 ↑
                   </button>
                 </div>
@@ -1638,7 +1638,7 @@ export default function ChatApp({ user }) {
                   </button>
                   <input type="text" value={groupInput} onChange={e => setGroupInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendGroup()} placeholder={`在「${activeGroup.name}」發送訊息...`}
                     style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "9px 14px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
-                  <button className="sb" onClick={sendGroup} style={{ background: "#3b82f6", border: "none", borderRadius: 10, padding: "9px 16px", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>發送 ↑</button>
+                  <button className="sb" onClick={sendGroup} style={{ background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 16px", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>發送 ↑</button>
                 </div>
               </div>
             </>

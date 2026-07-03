@@ -103,7 +103,7 @@ function CommentSection({ postId, myProfile }) {
           <button
             onClick={submit}
             disabled={!text.trim() || sending}
-            style={{ background: text.trim() ? "#3b82f6" : "#1e293b", border: "none", borderRadius: 20, padding: "6px 14px", color: text.trim() ? "#fff" : "#475569", cursor: text.trim() ? "pointer" : "default", fontSize: 13, fontWeight: 600 }}
+            style={{ background: text.trim() ? "#7c3aed" : "#1e293b", border: "none", borderRadius: 20, padding: "6px 14px", color: text.trim() ? "#fff" : "#475569", cursor: text.trim() ? "pointer" : "default", fontSize: 13, fontWeight: 600 }}
           >
             送出
           </button>
@@ -282,7 +282,7 @@ function NewPostForm({ myProfile, onPosted }) {
             <button
               onClick={submit}
               disabled={!canPost}
-              style={{ background: canPost ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "#1e293b", border: "none", borderRadius: 10, padding: "8px 20px", color: canPost ? "#fff" : "#475569", cursor: canPost ? "pointer" : "default", fontSize: 14, fontWeight: 700 }}
+              style={{ background: canPost ? "linear-gradient(135deg,#8b5cf6,#22d3ee)" : "#1e293b", border: "none", borderRadius: 10, padding: "8px 20px", color: canPost ? "#fff" : "#475569", cursor: canPost ? "pointer" : "default", fontSize: 14, fontWeight: 700 }}
             >
               {posting ? "發佈中..." : "發佈"}
             </button>

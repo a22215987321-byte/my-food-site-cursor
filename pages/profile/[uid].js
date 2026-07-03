@@ -138,7 +138,7 @@ function NewPostForm({ profile, onPosted }) {
             </button>
             <input ref={fileRef} type="file" accept="image/*,video/*" onChange={onFile} style={{ display: "none" }} />
             <button onClick={submit} disabled={!canPost}
-              style={{ background: canPost ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "#1e293b", border: "none", borderRadius: 10, padding: "8px 20px", color: canPost ? "#fff" : "#475569", cursor: canPost ? "pointer" : "default", fontSize: 14, fontWeight: 700 }}>
+              style={{ background: canPost ? "linear-gradient(135deg,#8b5cf6,#22d3ee)" : "#1e293b", border: "none", borderRadius: 10, padding: "8px 20px", color: canPost ? "#fff" : "#475569", cursor: canPost ? "pointer" : "default", fontSize: 14, fontWeight: 700 }}>
               {posting ? "發佈中..." : "發佈"}
             </button>
           </div>
@@ -226,7 +226,7 @@ export default function ProfilePublicPage() {
       <div style={{ minHeight: "100vh", background: "#0f172a", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
         <div style={{ fontSize: 48 }}>😶</div>
         <div style={{ color: "#94a3b8", fontSize: 18 }}>找不到此用戶</div>
-        <Link href="/" style={{ color: "#3b82f6", textDecoration: "none", fontSize: 14 }}>← 返回聊天室</Link>
+        <Link href="/" style={{ color: "#a78bfa", textDecoration: "none", fontSize: 14 }}>← 返回聊天室</Link>
       </div>
     );
   }
@@ -301,9 +301,9 @@ export default function ProfilePublicPage() {
                 ⚙️ 編輯個人資料
               </Link>
             ) : (
-              <Link href={`/?chat=${uid}`} style={{ background: "#3b82f6", border: "none", borderRadius: 20, padding: "8px 18px", color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 700, marginBottom: 8, transition: "background 0.15s", display: "inline-block" }}
-                onMouseEnter={e => e.currentTarget.style.background = "#2563eb"}
-                onMouseLeave={e => e.currentTarget.style.background = "#3b82f6"}>
+              <Link href={`/?chat=${uid}`} style={{ background: "#7c3aed", border: "none", borderRadius: 20, padding: "8px 18px", color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 700, marginBottom: 8, transition: "background 0.15s", display: "inline-block" }}
+                onMouseEnter={e => e.currentTarget.style.background = "#6d28d9"}
+                onMouseLeave={e => e.currentTarget.style.background = "#7c3aed"}>
                 💬 傳訊息
               </Link>
             )}
@@ -350,7 +350,7 @@ export default function ProfilePublicPage() {
           <div style={{ display: "flex", borderBottom: "1px solid #1e293b" }}>
             {[["posts","貼文"],["media","媒體"]].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)}
-                style={{ flex: 1, padding: "14px 0", background: "none", border: "none", borderBottom: tab === key ? "2px solid #3b82f6" : "2px solid transparent", color: tab === key ? "#f1f5f9" : "#64748b", fontSize: 14, fontWeight: tab === key ? 700 : 500, cursor: "pointer", transition: "color 0.15s" }}>
+                style={{ flex: 1, padding: "14px 0", background: "none", border: "none", borderBottom: tab === key ? "2px solid #8b5cf6" : "2px solid transparent", color: tab === key ? "#f1f5f9" : "#64748b", fontSize: 14, fontWeight: tab === key ? 700 : 500, cursor: "pointer", transition: "color 0.15s" }}>
                 {label}
               </button>
             ))}
