@@ -3,10 +3,6 @@ import Link from "next/link";
 import { auth, db } from "../lib/firebase";
 import AvatarCreator from "./AvatarCreator";
 import CalendarMemo from "./CalendarMemo";
-import VocabRoom from "./VocabRoom";
-import SpanishRoom from "./SpanishRoom";
-import CustomVocabRoom from "./CustomVocabRoom";
-import DictionaryRoom from "./DictionaryRoom";
 import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, orderBy, limitToLast, serverTimestamp,
@@ -632,10 +628,7 @@ export default function ChatApp({ user }) {
   const [showDonateModal,  setShowDonateModal]  = useState(false);
 
   // Vocab states
-  const [showVocab,        setShowVocab]        = useState(false);
-  const [showSpanish,      setShowSpanish]      = useState(false);
-  const [showCustomVocab,  setShowCustomVocab]  = useState(false);
-  const [showDict,         setShowDict]         = useState(false);
+
 
   // Cinema states
   const [showCinema,       setShowCinema]       = useState(false);
@@ -1204,8 +1197,8 @@ export default function ChatApp({ user }) {
 
           {/* Hall button */}
           <div style={{ padding: "4px 10px 0" }}>
-            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowVocab(false); setShowSpanish(false); setShowCustomVocab(false); setShowDict(false); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showVocab && !showSpanish && !showCustomVocab && !showDict ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showVocab && !showSpanish && !showCustomVocab && !showDict ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "act" : ""}`}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#a855f7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}># 公共大廳</div>
@@ -1216,7 +1209,7 @@ export default function ChatApp({ user }) {
 
           {/* Leaderboard button */}
           <div style={{ padding: "4px 10px 6px" }}>
-            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); setShowVocab(false); setShowSpanish(false); setShowCustomVocab(false); setShowDict(false); }} className={`fb ${showLeaderboard ? "act" : ""}`}
+            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); }} className={`fb ${showLeaderboard ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showLeaderboard ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏆</div>
               <div>
@@ -1228,56 +1221,12 @@ export default function ChatApp({ user }) {
 
           {/* Cinema button */}
           <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowVocab(false); setShowSpanish(false); setShowCustomVocab(false); setShowDict(false); }} className={`fb ${showCinema ? "act" : ""}`}
+            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); }} className={`fb ${showCinema ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCinema ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#1e3a5f,#2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🎬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>電影院</div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>螢幕分享直播</div>
-              </div>
-            </button>
-          </div>
-
-          {/* Vocab button */}
-          <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowVocab(true); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowSpanish(false); setShowCustomVocab(false); setShowDict(false); }} className={`fb ${showVocab ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showVocab ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#065f46,#10b981)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📚</div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>詞彙學習</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>IELTS 練習</div>
-              </div>
-            </button>
-          </div>
-
-          {/* Spanish button */}
-          <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowSpanish(true); setShowVocab(false); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowCustomVocab(false); setShowDict(false); }} className={`fb ${showSpanish ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showSpanish ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#7c1d1d,#dc2626)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🇪🇸</div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>西語學習</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>CEFR A1/A2</div>
-              </div>
-            </button>
-          </div>
-
-          {/* Custom vocab button */}
-          <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowCustomVocab(true); setShowSpanish(false); setShowVocab(false); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowDict(false); }} className={`fb ${showCustomVocab ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCustomVocab ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#1e3a5f,#7c3aed)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📝</div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>自建詞彙</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>建立你的詞彙表</div>
-              </div>
-            </button>
-            <button onClick={() => { setShowDict(true); setShowCustomVocab(false); setShowSpanish(false); setShowVocab(false); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); }} className={`fb ${showDict ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showDict ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#0f2e1c,#166534)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📖</div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>字典</div>
-                <div style={{ fontSize: 11, color: "#94a3b8" }}>英語 · 西語 A-Z</div>
               </div>
             </button>
           </div>
@@ -1291,7 +1240,7 @@ export default function ChatApp({ user }) {
             {myGroups.map(group => {
               const isActive = activeGroupId === group.id;
               return (
-                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowVocab(false); setShowSpanish(false); setShowCustomVocab(false); setShowDict(false); }}
+                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
@@ -1331,7 +1280,7 @@ export default function ChatApp({ user }) {
             {myFriends.map(friend => {
               const isActive = activeFriendId === friend.uid;
               return (
-                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowVocab(false); setShowSpanish(false); setShowCustomVocab(false); setShowDict(false); }}
+                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); }}
                   onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, friend }); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#1d4ed8" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
@@ -1555,28 +1504,8 @@ export default function ChatApp({ user }) {
             </>
           )}
 
-          {/* Vocab view */}
-          {showVocab && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && (
-            <VocabRoom user={user} db={db} />
-          )}
-
-          {/* Spanish view */}
-          {showSpanish && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showVocab && (
-            <SpanishRoom user={user} db={db} />
-          )}
-
-          {/* Custom vocab view */}
-          {showCustomVocab && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showVocab && !showSpanish && (
-            <CustomVocabRoom user={myProfile || user} db={db} />
-          )}
-
-          {/* Dictionary view */}
-          {showDict && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showVocab && !showSpanish && !showCustomVocab && (
-            <DictionaryRoom />
-          )}
-
           {/* Public hall */}
-          {!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showVocab && !showSpanish && !showCustomVocab && !showDict && (
+          {!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && (
             <>
               <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
                 <span style={{ fontSize: 20 }}>💬</span>
