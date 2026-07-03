@@ -121,7 +121,7 @@ function SplashScreen({ onEnter }) {
               </div>
               <div className="sp-title">
                 <h1 className="sp-h1 sp-l1">EVON</h1>
-                <h1 className="sp-h1 sp-l2">CHAT</h1>
+                <h1 className="sp-h1 sp-l2">VCHAT</h1>
               </div>
               <span className="sp-sub">即時聊天・好友・群組・直播</span>
             </div>
@@ -245,7 +245,7 @@ export default function Home() {
           .evon-spinner {
             width: 48px; height: 48px; border-radius: 50%;
             border: 4px solid #1e293b;
-            border-top-color: #6366f1;
+            border-top-color: #8b5cf6;
             animation: evon-spin 0.8s linear infinite;
           }
         `}</style>
@@ -278,7 +278,7 @@ export default function Home() {
               <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 6, display: 'block' }}>選擇頭像</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                 {AVATAR_EMOJIS.map(e => (
-                  <button key={e} onClick={() => setSetupAvatar(e)} style={{ width: 38, height: 38, borderRadius: '50%', border: setupAvatar === e ? '2px solid #3b82f6' : '2px solid transparent', background: setupColor, cursor: 'pointer', fontSize: 18 }}>{e}</button>
+                  <button key={e} onClick={() => setSetupAvatar(e)} style={{ width: 38, height: 38, borderRadius: '50%', border: setupAvatar === e ? '2px solid #8b5cf6' : '2px solid transparent', background: setupColor, cursor: 'pointer', fontSize: 18 }}>{e}</button>
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -294,7 +294,7 @@ export default function Home() {
                 style={inputStyle} />
             </div>
             <button onClick={handleSetup} disabled={busy || !setupNickname.trim()} style={{
-              width: '100%', background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
+              width: '100%', background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)',
               border: 'none', borderRadius: 10, padding: '12px', color: '#fff',
               fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: (busy || !setupNickname.trim()) ? 0.6 : 1,
             }}>
@@ -311,9 +311,18 @@ export default function Home() {
     <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>💬</div>
-          <h1 style={{ color: '#e2e8f0', fontSize: 24, fontWeight: 700, margin: 0 }}>聊天社交平台</h1>
-          <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>與朋友保持聯繫</p>
+          <div style={{
+            width: 64, height: 64, margin: '0 auto 16px', borderRadius: 18,
+            background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
+            boxShadow: '0 8px 24px rgba(139,92,246,0.35)',
+          }}>💬</div>
+          <h1 style={{
+            fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: 0.3,
+            background: 'linear-gradient(135deg,#c4b5fd,#67e8f9)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>EvonVChat</h1>
+          <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>聊天社交平台・與朋友保持聯繫</p>
         </div>
         <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, border: '1px solid #334155' }}>
           {/* Tab switch */}
@@ -321,7 +330,7 @@ export default function Home() {
             {['login','register'].map(t => (
               <button key={t} onClick={() => { setTab(t); setAuthError(''); }} style={{
                 flex: 1, padding: '8px 0', border: 'none', borderRadius: 8, cursor: 'pointer',
-                background: tab === t ? '#3b82f6' : 'transparent',
+                background: tab === t ? 'linear-gradient(135deg,#8b5cf6,#22d3ee)' : 'transparent',
                 color: tab === t ? '#fff' : '#64748b', fontSize: 14, fontWeight: 600,
               }}>{t === 'login' ? '登入' : '註冊'}</button>
             ))}
@@ -333,7 +342,7 @@ export default function Home() {
               <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 6, display: 'block' }}>選擇頭像</label>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
                 {AVATAR_EMOJIS.map(e => (
-                  <button key={e} onClick={() => setAvatar(e)} style={{ width: 38, height: 38, borderRadius: '50%', border: avatar === e ? '2px solid #3b82f6' : '2px solid transparent', background: color, cursor: 'pointer', fontSize: 18 }}>{e}</button>
+                  <button key={e} onClick={() => setAvatar(e)} style={{ width: 38, height: 38, borderRadius: '50%', border: avatar === e ? '2px solid #8b5cf6' : '2px solid transparent', background: color, cursor: 'pointer', fontSize: 18 }}>{e}</button>
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
@@ -370,7 +379,7 @@ export default function Home() {
           )}
 
           <button onClick={tab === 'login' ? handleLogin : handleRegister} disabled={busy} style={{
-            width: '100%', background: 'linear-gradient(135deg,#3b82f6,#6366f1)',
+            width: '100%', background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)',
             border: 'none', borderRadius: 10, padding: '12px', color: '#fff',
             fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 14, opacity: busy ? 0.7 : 1,
           }}>
