@@ -61,7 +61,7 @@ async function fetchWiktionary(word, langSection) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const r = await fetch(url, { headers: { "User-Agent": "evonchat.com/1.0" }, signal: ctrl.signal });
+    const r = await fetch(url, { headers: { "User-Agent": "evonvchat.com/1.0" }, signal: ctrl.signal });
     clearTimeout(t);
     if (!r.ok) return [];
     const data = await r.json();
@@ -85,7 +85,7 @@ async function fetchTatoeba(word, lang) {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 8000);
     try {
-      const r = await fetch(url, { headers: { "User-Agent": "evonchat.com/1.0" }, signal: ctrl.signal });
+      const r = await fetch(url, { headers: { "User-Agent": "evonvchat.com/1.0" }, signal: ctrl.signal });
       clearTimeout(t);
       if (!r.ok) continue;
       const data = await r.json();

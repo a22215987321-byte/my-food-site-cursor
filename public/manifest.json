@@ -1,6 +1,6 @@
 {
-  "name": "Evon Chat",
-  "short_name": "Evon Chat",
+  "name": "EvonVChat",
+  "short_name": "EvonVChat",
   "description": "即時社交聊天平台",
   "start_url": "/",
   "display": "standalone",

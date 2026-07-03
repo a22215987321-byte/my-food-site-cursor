@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /api/
 
-Sitemap: https://www.evonchat.com/sitemap.xml
+Sitemap: https://www.evonvchat.com/sitemap.xml

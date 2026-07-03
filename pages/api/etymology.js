@@ -114,7 +114,7 @@ export default async function handler(req, res) {
     const timer = setTimeout(() => controller.abort(), 8000);
 
     const r = await fetch(apiUrl, {
-      headers: { "User-Agent": "evonchat.com/1.0 etymology-lookup" },
+      headers: { "User-Agent": "evonvchat.com/1.0 etymology-lookup" },
       signal: controller.signal,
     });
     clearTimeout(timer);

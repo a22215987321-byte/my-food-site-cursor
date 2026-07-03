@@ -20,8 +20,8 @@ export default async function handler(req, res) {
     params.append("metadata[userColor]", userColor || "");
     params.append("metadata[userAvatarImage]", userAvatarImage || "");
     params.append("metadata[amount]", String(amount));
-    params.append("success_url", "https://www.evonchat.com/?donation=success");
-    params.append("cancel_url", "https://www.evonchat.com/");
+    params.append("success_url", "https://www.evonvchat.com/?donation=success");
+    params.append("cancel_url", "https://www.evonvchat.com/");
 
     const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
       method: "POST",
