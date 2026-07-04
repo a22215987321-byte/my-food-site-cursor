@@ -633,6 +633,8 @@ export default function ChatApp({ user }) {
   const [companionMessages, setCompanionMessages] = useState([]);
   const [companionInput,    setCompanionInput]    = useState("");
   const [companionTyping,   setCompanionTyping]   = useState(false);
+  const [fatherBriefLoading, setFatherBriefLoading] = useState(false);
+  const fatherBriefPostingRef = useRef(false);
   // 用跟真人好友私訊完全相同的 ID 規則（[uid, 對方id].sort().join('_')），
   // 這樣既有的 private_chats 安全規則不需要另外調整就能套用在 AI 陪伴聊天上。
   const companionChatId = activeCompanion ? [uid, `ai${activeCompanion}`].sort().join('_') : null;
@@ -823,6 +825,56 @@ export default function ChatApp({ user }) {
       setCompanionMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, [uid, activeCompanion]);
+
+  // 開啟 AI 爸爸時預熱財經新聞，並自動推送當日總結（每天一則）
+  useEffect(() => {
+    if (activeCompanion !== "father") {
+      fatherBriefPostingRef.current = false;
+      return;
+    }
+    if (!companionChatId || !uid) return;
+
+    let cancelled = false;
+    const alreadyPosted = companionMessages.some(
+      (m) => m.senderId === "aifather" && m.dailyBrief === true && m.briefDate
+    );
+    if (alreadyPosted || fatherBriefPostingRef.current) return;
+
+    (async () => {
+      setFatherBriefLoading(true);
+      try {
+        fetch("/api/finance-news").catch(() => {});
+        const res = await fetch("/api/finance-daily-brief");
+        const data = await res.json();
+        if (cancelled || !data.summary || !data.dateKey) return;
+
+        const dup = companionMessages.some(
+          (m) => m.senderId === "aifather" && m.briefDate === data.dateKey
+        );
+        if (dup || fatherBriefPostingRef.current) return;
+
+        fatherBriefPostingRef.current = true;
+        const meta = COMPANION_META.father;
+        await addDoc(collection(db, "private_chats", companionChatId, "messages"), {
+          senderId: "aifather",
+          sender: meta.name,
+          avatar: meta.avatar,
+          senderAvatarImage: "",
+          text: data.summary,
+          dailyBrief: true,
+          briefDate: data.dateKey,
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.error("[father-daily-brief] auto-post failed:", err);
+        fatherBriefPostingRef.current = false;
+      } finally {
+        if (!cancelled) setFatherBriefLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [activeCompanion, companionChatId, uid, companionMessages]);
 
   // Groups listener
   useEffect(() => {
@@ -1939,7 +1991,7 @@ export default function ChatApp({ user }) {
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{COMPANION_META[activeCompanion].name}</div>
-                  <div style={{ fontSize: 11, color: "#22c55e" }}>永遠在線 · AI 陪伴角色</div>
+                  <div style={{ fontSize: 11, color: "#22c55e" }}>{COMPANION_META[activeCompanion].tagline || "永遠在線 · AI 陪伴角色"}</div>
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 2, backgroundImage: "radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0)", backgroundSize: "28px 28px" }}>
@@ -1958,6 +2010,12 @@ export default function ChatApp({ user }) {
                     <div style={{ padding: "9px 14px", borderRadius: 18, background: "#1e293b", border: "1px solid #334155", color: "#64748b", fontSize: 13 }}>對方正在輸入…</div>
                   </div>
                 )}
+                {activeCompanion === "father" && fatherBriefLoading && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: COMPANION_META.father.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{COMPANION_META.father.avatar}</div>
+                    <div style={{ padding: "9px 14px", borderRadius: 18, background: "#1e293b", border: "1px solid #334155", color: "#64748b", fontSize: 13 }}>爸爸正在整理今日財經總結…</div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
               <div style={{ padding: "10px 14px 14px", background: "#0f172a", borderTop: "1px solid #1e293b", flexShrink: 0 }}>
@@ -1969,7 +2027,11 @@ export default function ChatApp({ user }) {
                     發送 ↑
                   </button>
                 </div>
-                <div style={{ textAlign: "center", fontSize: 11, color: "#334155", marginTop: 4 }}>AI 陪伴角色會自動回覆，內容僅供陪伴聊天，非專業建議</div>
+                <div style={{ textAlign: "center", fontSize: 11, color: "#334155", marginTop: 4 }}>
+                  {activeCompanion === "father"
+                    ? "AI 爸爸每日吸收最新財經新聞，回覆僅供陪伴聊天，非投資建議"
+                    : "AI 陪伴角色會自動回覆，內容僅供陪伴聊天，非專業建議"}
+                </div>
               </div>
             </>
           )}

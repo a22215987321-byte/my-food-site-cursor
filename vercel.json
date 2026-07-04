@@ -3,10 +3,14 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "crons": [
-    { "path": "/api/ai-news", "schedule": "0 0 * * *" }
+    { "path": "/api/ai-news", "schedule": "0 0 * * *" },
+    { "path": "/api/finance-news", "schedule": "0 1 * * *" },
+    { "path": "/api/finance-daily-brief?refresh=1", "schedule": "30 16 * * *" }
   ],
   "functions": {
     "pages/api/ai-news.js": { "maxDuration": 30 },
-    "pages/api/ai-companion.js": { "maxDuration": 20 }
+    "pages/api/finance-news.js": { "maxDuration": 30 },
+    "pages/api/finance-daily-brief.js": { "maxDuration": 30 },
+    "pages/api/ai-companion.js": { "maxDuration": 25 }
   }
 }
