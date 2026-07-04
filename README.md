@@ -25,11 +25,17 @@ npm run dev
 
 ## AI 新聞功能
 
-`pages/api/ai-news.js` 會即時抓取多個公開 RSS 來源（TechCrunch AI、VentureBeat AI、MIT Technology Review、The Verge AI、AI News），合併、去重、依發布時間排序後回傳最新 20 則。
+`pages/api/ai-news.js` 會即時抓取多個公開 RSS 來源（TechCrunch AI、VentureBeat AI、MIT Technology Review、The Verge AI、AI News），合併、去重、依發布時間排序後取最新 20 則，並對每一則做：
 
-- 不需要任何 API 金鑰或資料庫，純抓取公開 RSS。
-- 透過 HTTP `Cache-Control: s-maxage=3600, stale-while-revalidate=86400` 讓 Vercel 邊緣網路快取結果，兼顧「每日更新」與效能。
-- `vercel.json` 設定了每日 00:00 UTC 的 Cron Job 主動打一次這個 API，確保使用者一早打開就有當天最新內容。
+1. **AI 摘要**：用詞頻＋首句加權的抽取式摘要演算法，從原文中挑出最具代表性的 1-2 句話，不需要任何付費 LLM API。
+2. **中文翻譯**：標題與摘要都會翻譯成繁體中文（透過翻譯服務），失敗時自動退回英文原文，不會讓整個功能掛掉。
+
+其他設計考量：
+
+- 不需要任何 API 金鑰或資料庫，純抓取公開資源。
+- 翻譯請求有併發限制（同時最多 10 個），避免短時間內送出過多請求被擋。
+- 透過 HTTP `Cache-Control: s-maxage=3600, stale-while-revalidate=86400` 讓 Vercel 邊緣網路快取結果，兼顧「每日更新」與效能，也避免每次請求都重新跑一次翻譯流程。
+- `vercel.json` 設定了每日 00:00 UTC 的 Cron Job 主動打一次這個 API，確保使用者一早打開就有當天最新內容；同時把這個 API 的 `maxDuration` 設為 30 秒，讓翻譯有足夠時間完成。
 
 ## 部署
 

@@ -1587,8 +1587,16 @@ export default function ChatApp({ user }) {
                           </span>
                         )}
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: "#e2e8f0", marginBottom: 6, lineHeight: 1.4 }}>{item.title}</div>
-                      {item.summary && <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>{item.summary}</div>}
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "#e2e8f0", marginBottom: 6, lineHeight: 1.4 }}>{item.titleZh || item.title}</div>
+                      {item.summaryZh && (
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <span style={{ flexShrink: 0, marginTop: 2, background: "rgba(139,92,246,0.15)", color: "#c4b5fd", fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 6, height: "fit-content" }}>AI 摘要</span>
+                          <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>{item.summaryZh}</div>
+                        </div>
+                      )}
+                      {item.titleZh && item.titleZh !== item.title && (
+                        <div style={{ fontSize: 11, color: "#475569", marginTop: 8 }}>原文標題：{item.title}</div>
+                      )}
                     </a>
                   ))}
                 </div>
