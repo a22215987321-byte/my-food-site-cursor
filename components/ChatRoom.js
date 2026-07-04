@@ -627,8 +627,32 @@ export default function ChatApp({ user }) {
   const [donations,        setDonations]        = useState([]);
   const [showDonateModal,  setShowDonateModal]  = useState(false);
 
-  // Vocab states
+  // AI News states
+  const [showAiNews,   setShowAiNews]   = useState(false);
+  const [aiNewsItems,  setAiNewsItems]  = useState([]);
+  const [aiNewsLoading, setAiNewsLoading] = useState(false);
+  const [aiNewsError,  setAiNewsError]  = useState(false);
 
+  const loadAiNews = useCallback(async () => {
+    setAiNewsLoading(true);
+    setAiNewsError(false);
+    try {
+      const res = await fetch("/api/ai-news");
+      const data = await res.json();
+      setAiNewsItems(data.items || []);
+    } catch (err) {
+      console.error("[ai-news] fetch failed:", err);
+      setAiNewsError(true);
+    } finally {
+      setAiNewsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showAiNews && aiNewsItems.length === 0 && !aiNewsLoading) {
+      loadAiNews();
+    }
+  }, [showAiNews, aiNewsItems.length, aiNewsLoading, loadAiNews]);
 
   // Cinema states
   const [showCinema,       setShowCinema]       = useState(false);
@@ -1094,7 +1118,7 @@ export default function ChatApp({ user }) {
             👤 個人資料
           </button>
           <div style={{ height: 1, background: "#334155", margin: "4px 0" }} />
-          <button onClick={() => { setActiveFriendId(contextMenu.friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setContextMenu(null); }}
+          <button onClick={() => { setActiveFriendId(contextMenu.friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setContextMenu(null); }}
             style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 14px", color: "#e2e8f0", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer" }}
             onMouseEnter={e => e.currentTarget.style.background = "#334155"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -1123,7 +1147,7 @@ export default function ChatApp({ user }) {
                 {friendInfo.bio && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 10, lineHeight: 1.6 }}>{friendInfo.bio}</div>}
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setFriendInfo(null); }}
+                <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setFriendInfo(null); }}
                   style={{ flex: 1, background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 0", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   💬 傳訊息
                 </button>
@@ -1197,8 +1221,8 @@ export default function ChatApp({ user }) {
 
           {/* Hall button */}
           <div style={{ padding: "4px 10px 0" }}>
-            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews ? "act" : ""}`}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}># 公共大廳</div>
@@ -1209,7 +1233,7 @@ export default function ChatApp({ user }) {
 
           {/* Leaderboard button */}
           <div style={{ padding: "4px 10px 6px" }}>
-            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); }} className={`fb ${showLeaderboard ? "act" : ""}`}
+            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); setShowAiNews(false); }} className={`fb ${showLeaderboard ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showLeaderboard ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏆</div>
               <div>
@@ -1221,12 +1245,24 @@ export default function ChatApp({ user }) {
 
           {/* Cinema button */}
           <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); }} className={`fb ${showCinema ? "act" : ""}`}
+            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowAiNews(false); }} className={`fb ${showCinema ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCinema ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#4c1d95,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🎬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}>電影院</div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>螢幕分享直播</div>
+              </div>
+            </button>
+          </div>
+
+          {/* AI News button */}
+          <div style={{ padding: "0 10px 6px" }}>
+            <button onClick={() => { setShowAiNews(true); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); }} className={`fb ${showAiNews ? "act" : ""}`}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showAiNews ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>AI 新聞</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>每日 AI 資訊</div>
               </div>
             </button>
           </div>
@@ -1240,7 +1276,7 @@ export default function ChatApp({ user }) {
             {myGroups.map(group => {
               const isActive = activeGroupId === group.id;
               return (
-                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); }}
+                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
@@ -1280,7 +1316,7 @@ export default function ChatApp({ user }) {
             {myFriends.map(friend => {
               const isActive = activeFriendId === friend.uid;
               return (
-                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); }}
+                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }}
                   onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, friend }); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
@@ -1504,8 +1540,64 @@ export default function ChatApp({ user }) {
             </>
           )}
 
+          {/* AI News */}
+          {showAiNews && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && (
+            <>
+              <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
+                <span style={{ fontSize: 20 }}>🤖</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#e2e8f0" }}>AI 新聞</div>
+                  <div style={{ fontSize: 11, color: "#64748b" }}>每日自動彙整全球 AI 資訊</div>
+                </div>
+                <button onClick={loadAiNews} disabled={aiNewsLoading}
+                  style={{ marginLeft: "auto", background: "none", border: "1px solid #334155", borderRadius: 10, padding: "6px 14px", color: "#94a3b8", fontSize: 12, cursor: aiNewsLoading ? "default" : "pointer" }}>
+                  {aiNewsLoading ? "更新中…" : "🔄 重新整理"}
+                </button>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+                {aiNewsLoading && aiNewsItems.length === 0 && (
+                  <div style={{ textAlign: "center", padding: "80px 0", color: "#475569" }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>🤖</div>
+                    <div style={{ fontSize: 14, color: "#64748b" }}>正在為你彙整今天的 AI 新聞…</div>
+                  </div>
+                )}
+                {!aiNewsLoading && aiNewsError && aiNewsItems.length === 0 && (
+                  <div style={{ textAlign: "center", padding: "80px 0", color: "#475569" }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>⚠️</div>
+                    <div style={{ fontSize: 14, color: "#64748b" }}>新聞暫時載入失敗，請稍後再試</div>
+                  </div>
+                )}
+                {!aiNewsLoading && !aiNewsError && aiNewsItems.length === 0 && (
+                  <div style={{ textAlign: "center", padding: "80px 0", color: "#475569" }}>
+                    <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                    <div style={{ fontSize: 14, color: "#64748b" }}>目前沒有最新資訊</div>
+                  </div>
+                )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 720, margin: "0 auto" }}>
+                  {aiNewsItems.map((item, i) => (
+                    <a key={i} href={item.link} target="_blank" rel="noopener noreferrer"
+                      style={{ display: "block", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 16, padding: "16px 20px", textDecoration: "none", transition: "border-color 0.15s" }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = "#1e293b"}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>{item.source}</span>
+                        {item.publishedAt && (
+                          <span style={{ fontSize: 11, color: "#64748b" }}>
+                            {new Date(item.publishedAt).toLocaleDateString("zh-TW", { month: "short", day: "numeric" })}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: 15, color: "#e2e8f0", marginBottom: 6, lineHeight: 1.4 }}>{item.title}</div>
+                      {item.summary && <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.6 }}>{item.summary}</div>}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Public hall */}
-          {!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && (
+          {!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && (
             <>
               <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
                 <span style={{ fontSize: 20 }}>💬</span>
