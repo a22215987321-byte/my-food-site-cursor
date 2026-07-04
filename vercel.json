@@ -6,6 +6,7 @@
     { "path": "/api/ai-news", "schedule": "0 0 * * *" }
   ],
   "functions": {
-    "pages/api/ai-news.js": { "maxDuration": 30 }
+    "pages/api/ai-news.js": { "maxDuration": 30 },
+    "pages/api/ai-companion.js": { "maxDuration": 20 }
   }
 }

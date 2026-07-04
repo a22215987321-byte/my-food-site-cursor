@@ -668,18 +668,50 @@ export default function ChatApp({ user }) {
   const [speakingIndex, setSpeakingIndex] = useState(null); // null | 'all' | 數字索引
   const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window;
 
+  const [zhVoices, setZhVoices] = useState([]);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
+
+  // 讓瀏覽器盡早載入語音清單，避免第一次播放時 getVoices() 還是空的（Chrome 常見狀況）
+  useEffect(() => {
+    if (!speechSupported) return;
+    const isZh = (v) => v.lang === "zh-TW" || v.lang === "zh-HK" || v.lang?.startsWith("zh");
+    const refresh = () => setZhVoices(window.speechSynthesis.getVoices().filter(isZh));
+    refresh();
+    window.speechSynthesis.addEventListener("voiceschanged", refresh);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", refresh);
+  }, [speechSupported]);
+
+  const pickBestZhVoice = useCallback(() => {
+    if (selectedVoiceURI) {
+      const chosen = zhVoices.find(v => v.voiceURI === selectedVoiceURI);
+      if (chosen) return chosen;
+    }
+    if (!zhVoices.length) return null;
+    const isHighQuality = (v) => /natural|online|neural/i.test(v.name || "");
+    // 雲端語音（localService === false）通常比本機系統語音自然許多，優先選用
+    const isCloud = (v) => v.localService === false;
+    return (
+      zhVoices.find(v => v.lang === "zh-TW" && (isHighQuality(v) || isCloud(v))) ||
+      zhVoices.find(v => isHighQuality(v) || isCloud(v)) ||
+      zhVoices.find(v => v.lang === "zh-TW") ||
+      zhVoices.find(v => v.lang === "zh-HK") ||
+      zhVoices[0] ||
+      null
+    );
+  }, [zhVoices, selectedVoiceURI]);
+
   const speakText = useCallback((text, onEnd) => {
     if (!speechSupported || !text) { onEnd?.(); return; }
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = "zh-TW";
-    const voices = window.speechSynthesis.getVoices();
-    const zhVoice = voices.find(v => v.lang === "zh-TW") || voices.find(v => v.lang?.startsWith("zh"));
+    const zhVoice = pickBestZhVoice();
     if (zhVoice) utter.voice = zhVoice;
-    utter.rate = 1;
+    utter.rate = 0.95;
+    utter.pitch = 1;
     utter.onend = () => onEnd?.();
     utter.onerror = () => onEnd?.();
     window.speechSynthesis.speak(utter);
-  }, [speechSupported]);
+  }, [speechSupported, pickBestZhVoice]);
 
   const stopSpeaking = useCallback(() => {
     if (speechSupported) window.speechSynthesis.cancel();
@@ -903,6 +935,10 @@ export default function ChatApp({ user }) {
     const text = companionInput.trim();
     const role = activeCompanion;
     const cid = companionChatId;
+    const history = companionMessages.slice(-8).map(m => ({
+      role: m.senderId === uid ? "user" : "assistant",
+      text: m.text || "",
+    }));
     setCompanionInput("");
     await addDoc(collection(db, 'private_chats', cid, 'messages'), {
       senderId: uid, sender: myProfile.nickname, avatar: myProfile.avatar,
@@ -910,19 +946,30 @@ export default function ChatApp({ user }) {
       text, createdAt: serverTimestamp(),
     });
     setCompanionTyping(true);
-    const reply = generateCompanionReply(role, text, myProfile.nickname);
     const meta = COMPANION_META[role];
-    setTimeout(async () => {
-      try {
-        await addDoc(collection(db, 'private_chats', cid, 'messages'), {
-          senderId: `ai${role}`, sender: meta.name, avatar: meta.avatar,
-          senderAvatarImage: "", text: reply, createdAt: serverTimestamp(),
-        });
-      } finally {
-        setCompanionTyping(false);
-      }
-    }, 700 + Math.random() * 600);
-  }, [companionInput, activeCompanion, myProfile, uid, companionChatId]);
+    try {
+      const res = await fetch("/api/ai-companion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, message: text, history, nickname: myProfile.nickname }),
+      });
+      const data = await res.json();
+      const reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
+      await addDoc(collection(db, 'private_chats', cid, 'messages'), {
+        senderId: `ai${role}`, sender: meta.name, avatar: meta.avatar,
+        senderAvatarImage: "", text: reply, createdAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.error("[ai-companion] request failed:", err);
+      const reply = generateCompanionReply(role, text, myProfile.nickname);
+      await addDoc(collection(db, 'private_chats', cid, 'messages'), {
+        senderId: `ai${role}`, sender: meta.name, avatar: meta.avatar,
+        senderAvatarImage: "", text: reply, createdAt: serverTimestamp(),
+      });
+    } finally {
+      setCompanionTyping(false);
+    }
+  }, [companionInput, activeCompanion, myProfile, uid, companionChatId, companionMessages]);
 
   const sendPrivateMedia = useCallback(async (file) => {
     if (!activeFriendId || !myProfile) return;
@@ -1671,8 +1718,15 @@ export default function ChatApp({ user }) {
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#e2e8f0" }}>AI 新聞</div>
                   <div style={{ fontSize: 11, color: "#64748b" }}>每日自動彙整全球 AI 資訊</div>
                 </div>
+                {zhVoices.length > 0 && (
+                  <select value={selectedVoiceURI} onChange={e => setSelectedVoiceURI(e.target.value)} title="選擇語音"
+                    style={{ marginLeft: "auto", background: "#1e293b", border: "1px solid #334155", borderRadius: 10, padding: "6px 8px", color: "#94a3b8", fontSize: 11, maxWidth: 140 }}>
+                    <option value="">自動選擇語音</option>
+                    {zhVoices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
+                  </select>
+                )}
                 <button onClick={speakingIndex !== null ? stopSpeaking : speakAllNews} disabled={aiNewsLoading || aiNewsItems.length === 0}
-                  style={{ marginLeft: "auto", background: speakingIndex !== null ? "#7c3aed" : "none", border: "1px solid #334155", borderRadius: 10, padding: "6px 14px", color: speakingIndex !== null ? "#fff" : "#94a3b8", fontSize: 12, cursor: (aiNewsLoading || aiNewsItems.length === 0) ? "default" : "pointer" }}>
+                  style={{ marginLeft: zhVoices.length > 0 ? 0 : "auto", background: speakingIndex !== null ? "#7c3aed" : "none", border: "1px solid #334155", borderRadius: 10, padding: "6px 14px", color: speakingIndex !== null ? "#fff" : "#94a3b8", fontSize: 12, cursor: (aiNewsLoading || aiNewsItems.length === 0) ? "default" : "pointer" }}>
                   {speakingIndex !== null ? "⏸ 停止播報" : "🔊 語音播報全部"}
                 </button>
                 <button onClick={loadAiNews} disabled={aiNewsLoading}
