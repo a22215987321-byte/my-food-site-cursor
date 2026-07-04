@@ -3,6 +3,7 @@ import Link from "next/link";
 import { auth, db } from "../lib/firebase";
 import AvatarCreator from "./AvatarCreator";
 import CalendarMemo from "./CalendarMemo";
+import { generateCompanionReply, COMPANION_META } from "../lib/aiCompanion";
 import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, orderBy, limitToLast, serverTimestamp,
@@ -627,6 +628,15 @@ export default function ChatApp({ user }) {
   const [donations,        setDonations]        = useState([]);
   const [showDonateModal,  setShowDonateModal]  = useState(false);
 
+  // AI Companion (AI 父親 / AI 母親) states
+  const [activeCompanion,   setActiveCompanion]   = useState(null); // null | 'father' | 'mother'
+  const [companionMessages, setCompanionMessages] = useState([]);
+  const [companionInput,    setCompanionInput]    = useState("");
+  const [companionTyping,   setCompanionTyping]   = useState(false);
+  // 用跟真人好友私訊完全相同的 ID 規則（[uid, 對方id].sort().join('_')），
+  // 這樣既有的 private_chats 安全規則不需要另外調整就能套用在 AI 陪伴聊天上。
+  const companionChatId = activeCompanion ? [uid, `ai${activeCompanion}`].sort().join('_') : null;
+
   // AI News states
   const [showAiNews,   setShowAiNews]   = useState(false);
   const [aiNewsItems,  setAiNewsItems]  = useState([]);
@@ -653,6 +663,54 @@ export default function ChatApp({ user }) {
       loadAiNews();
     }
   }, [showAiNews, aiNewsItems.length, aiNewsLoading, loadAiNews]);
+
+  // AI 語音報導：用瀏覽器內建的語音合成朗讀新聞，不需要任何 API 金鑰
+  const [speakingIndex, setSpeakingIndex] = useState(null); // null | 'all' | 數字索引
+  const speechSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  const speakText = useCallback((text, onEnd) => {
+    if (!speechSupported || !text) { onEnd?.(); return; }
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "zh-TW";
+    const voices = window.speechSynthesis.getVoices();
+    const zhVoice = voices.find(v => v.lang === "zh-TW") || voices.find(v => v.lang?.startsWith("zh"));
+    if (zhVoice) utter.voice = zhVoice;
+    utter.rate = 1;
+    utter.onend = () => onEnd?.();
+    utter.onerror = () => onEnd?.();
+    window.speechSynthesis.speak(utter);
+  }, [speechSupported]);
+
+  const stopSpeaking = useCallback(() => {
+    if (speechSupported) window.speechSynthesis.cancel();
+    setSpeakingIndex(null);
+  }, [speechSupported]);
+
+  const speakItem = useCallback((item, idx) => {
+    if (!speechSupported) { alert("此瀏覽器不支援語音播放功能"); return; }
+    window.speechSynthesis.cancel();
+    setSpeakingIndex(idx);
+    speakText(`${item.titleZh || item.title}。${item.summaryZh || ""}`, () => setSpeakingIndex(null));
+  }, [speechSupported, speakText]);
+
+  const speakAllNews = useCallback(() => {
+    if (!speechSupported) { alert("此瀏覽器不支援語音播放功能"); return; }
+    if (aiNewsItems.length === 0) return;
+    window.speechSynthesis.cancel();
+    setSpeakingIndex('all');
+    let i = 0;
+    const next = () => {
+      if (i >= aiNewsItems.length) { setSpeakingIndex(null); return; }
+      const item = aiNewsItems[i];
+      i += 1;
+      speakText(`第 ${i} 則，${item.titleZh || item.title}。${item.summaryZh || ""}`, next);
+    };
+    next();
+  }, [speechSupported, aiNewsItems, speakText]);
+
+  useEffect(() => {
+    if (!showAiNews) stopSpeaking();
+  }, [showAiNews, stopSpeaking]);
 
   // Cinema states
   const [showCinema,       setShowCinema]       = useState(false);
@@ -725,6 +783,15 @@ export default function ChatApp({ user }) {
     });
   }, [uid, activeFriendId]);
 
+  // AI Companion messages listener
+  useEffect(() => {
+    if (!activeCompanion) { setCompanionMessages([]); return; }
+    const q = query(collection(db, 'private_chats', companionChatId, 'messages'), orderBy('createdAt'), limitToLast(50));
+    return onSnapshot(q, snap => {
+      setCompanionMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+  }, [uid, activeCompanion]);
+
   // Groups listener
   useEffect(() => {
     const q = query(collection(db, 'groups'), where('members', 'array-contains', uid));
@@ -763,7 +830,7 @@ export default function ChatApp({ user }) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [hallMessages, privateMessages, groupMessages]);
+  }, [hallMessages, privateMessages, groupMessages, companionMessages]);
 
   useEffect(() => {
     const onVisibility = () => {
@@ -830,6 +897,32 @@ export default function ChatApp({ user }) {
       text, createdAt: serverTimestamp(),
     });
   }, [privateInput, activeFriendId, myProfile, uid, chatId]);
+
+  const sendCompanion = useCallback(async () => {
+    if (!companionInput.trim() || !activeCompanion || !myProfile) return;
+    const text = companionInput.trim();
+    const role = activeCompanion;
+    const cid = companionChatId;
+    setCompanionInput("");
+    await addDoc(collection(db, 'private_chats', cid, 'messages'), {
+      senderId: uid, sender: myProfile.nickname, avatar: myProfile.avatar,
+      senderAvatarImage: myProfile.avatarImage || "",
+      text, createdAt: serverTimestamp(),
+    });
+    setCompanionTyping(true);
+    const reply = generateCompanionReply(role, text, myProfile.nickname);
+    const meta = COMPANION_META[role];
+    setTimeout(async () => {
+      try {
+        await addDoc(collection(db, 'private_chats', cid, 'messages'), {
+          senderId: `ai${role}`, sender: meta.name, avatar: meta.avatar,
+          senderAvatarImage: "", text: reply, createdAt: serverTimestamp(),
+        });
+      } finally {
+        setCompanionTyping(false);
+      }
+    }, 700 + Math.random() * 600);
+  }, [companionInput, activeCompanion, myProfile, uid, companionChatId]);
 
   const sendPrivateMedia = useCallback(async (file) => {
     if (!activeFriendId || !myProfile) return;
@@ -910,6 +1003,10 @@ export default function ChatApp({ user }) {
     });
     setActiveGroupId(ref.id);
     setActiveFriendId(null);
+    setShowLeaderboard(false);
+    setShowCinema(false);
+    setShowAiNews(false);
+    setActiveCompanion(null);
     setShowCreateGroup(false);
   }, [uid]);
 
@@ -1118,7 +1215,7 @@ export default function ChatApp({ user }) {
             👤 個人資料
           </button>
           <div style={{ height: 1, background: "#334155", margin: "4px 0" }} />
-          <button onClick={() => { setActiveFriendId(contextMenu.friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setContextMenu(null); }}
+          <button onClick={() => { setActiveFriendId(contextMenu.friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); setContextMenu(null); }}
             style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 14px", color: "#e2e8f0", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer" }}
             onMouseEnter={e => e.currentTarget.style.background = "#334155"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -1147,7 +1244,7 @@ export default function ChatApp({ user }) {
                 {friendInfo.bio && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 10, lineHeight: 1.6 }}>{friendInfo.bio}</div>}
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setFriendInfo(null); }}
+                <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); setFriendInfo(null); }}
                   style={{ flex: 1, background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 0", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   💬 傳訊息
                 </button>
@@ -1221,8 +1318,8 @@ export default function ChatApp({ user }) {
 
           {/* Hall button */}
           <div style={{ padding: "4px 10px 0" }}>
-            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews ? "act" : ""}`}
-              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
+            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "act" : ""}`}
+              style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}># 公共大廳</div>
@@ -1233,7 +1330,7 @@ export default function ChatApp({ user }) {
 
           {/* Leaderboard button */}
           <div style={{ padding: "4px 10px 6px" }}>
-            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); setShowAiNews(false); }} className={`fb ${showLeaderboard ? "act" : ""}`}
+            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${showLeaderboard ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showLeaderboard ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏆</div>
               <div>
@@ -1245,7 +1342,7 @@ export default function ChatApp({ user }) {
 
           {/* Cinema button */}
           <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowAiNews(false); }} className={`fb ${showCinema ? "act" : ""}`}
+            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${showCinema ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCinema ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#4c1d95,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🎬</div>
               <div>
@@ -1257,7 +1354,7 @@ export default function ChatApp({ user }) {
 
           {/* AI News button */}
           <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowAiNews(true); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); }} className={`fb ${showAiNews ? "act" : ""}`}
+            <button onClick={() => { setShowAiNews(true); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setActiveCompanion(null); }} className={`fb ${showAiNews ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showAiNews ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
               <div>
@@ -1265,6 +1362,31 @@ export default function ChatApp({ user }) {
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>每日 AI 資訊</div>
               </div>
             </button>
+          </div>
+
+          {/* AI Companion section */}
+          <div style={{ padding: "0 12px 4px" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase" }}>AI 陪伴</span>
+          </div>
+          <div style={{ padding: "0 8px 6px" }}>
+            {["father", "mother"].map(role => {
+              const meta = COMPANION_META[role];
+              const isActive = activeCompanion === role;
+              return (
+                <button key={role} onClick={() => { setActiveCompanion(role); setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }}
+                  className={`fb ${isActive ? "act" : ""}`}
+                  style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: meta.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{meta.avatar}</div>
+                    <span style={{ position: "absolute", bottom: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: "#22c55e", border: "2px solid #0f172a" }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{meta.name}</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>永遠都在，隨時可以聊</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Groups section */}
@@ -1276,7 +1398,7 @@ export default function ChatApp({ user }) {
             {myGroups.map(group => {
               const isActive = activeGroupId === group.id;
               return (
-                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }}
+                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
@@ -1316,7 +1438,7 @@ export default function ChatApp({ user }) {
             {myFriends.map(friend => {
               const isActive = activeFriendId === friend.uid;
               return (
-                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }}
+                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }}
                   onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, friend }); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
@@ -1340,7 +1462,7 @@ export default function ChatApp({ user }) {
         <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#0a0f1e", minWidth: 0 }}>
 
           {/* Leaderboard view */}
-          {showLeaderboard && !activeFriendId && !activeGroupId && (
+          {showLeaderboard && !activeFriendId && !activeGroupId && !activeCompanion && (
             <>
               <div style={{ flex: 1, overflowY: "auto", background: "linear-gradient(180deg,#08091a 0%,#0d0a28 60%,#0a0f1e 100%)", padding: "36px 28px 24px" }}>
                 {/* Title */}
@@ -1413,7 +1535,7 @@ export default function ChatApp({ user }) {
           )}
 
           {/* Cinema view */}
-          {showCinema && !activeFriendId && !activeGroupId && !showLeaderboard && (
+          {showCinema && !activeFriendId && !activeGroupId && !showLeaderboard && !activeCompanion && (
             <>
               {cinemaView === 'list' && (
                 <>
@@ -1541,7 +1663,7 @@ export default function ChatApp({ user }) {
           )}
 
           {/* AI News */}
-          {showAiNews && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && (
+          {showAiNews && !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !activeCompanion && (
             <>
               <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
                 <span style={{ fontSize: 20 }}>🤖</span>
@@ -1549,8 +1671,12 @@ export default function ChatApp({ user }) {
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#e2e8f0" }}>AI 新聞</div>
                   <div style={{ fontSize: 11, color: "#64748b" }}>每日自動彙整全球 AI 資訊</div>
                 </div>
+                <button onClick={speakingIndex !== null ? stopSpeaking : speakAllNews} disabled={aiNewsLoading || aiNewsItems.length === 0}
+                  style={{ marginLeft: "auto", background: speakingIndex !== null ? "#7c3aed" : "none", border: "1px solid #334155", borderRadius: 10, padding: "6px 14px", color: speakingIndex !== null ? "#fff" : "#94a3b8", fontSize: 12, cursor: (aiNewsLoading || aiNewsItems.length === 0) ? "default" : "pointer" }}>
+                  {speakingIndex !== null ? "⏸ 停止播報" : "🔊 語音播報全部"}
+                </button>
                 <button onClick={loadAiNews} disabled={aiNewsLoading}
-                  style={{ marginLeft: "auto", background: "none", border: "1px solid #334155", borderRadius: 10, padding: "6px 14px", color: "#94a3b8", fontSize: 12, cursor: aiNewsLoading ? "default" : "pointer" }}>
+                  style={{ background: "none", border: "1px solid #334155", borderRadius: 10, padding: "6px 14px", color: "#94a3b8", fontSize: 12, cursor: aiNewsLoading ? "default" : "pointer" }}>
                   {aiNewsLoading ? "更新中…" : "🔄 重新整理"}
                 </button>
               </div>
@@ -1586,6 +1712,11 @@ export default function ChatApp({ user }) {
                             {new Date(item.publishedAt).toLocaleDateString("zh-TW", { month: "short", day: "numeric" })}
                           </span>
                         )}
+                        <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); speakingIndex === i ? stopSpeaking() : speakItem(item, i); }}
+                          title="語音播放這則新聞"
+                          style={{ marginLeft: "auto", background: speakingIndex === i ? "#7c3aed" : "rgba(255,255,255,0.06)", border: "none", borderRadius: 20, width: 26, height: 26, color: "#fff", fontSize: 12, cursor: "pointer", flexShrink: 0 }}>
+                          {speakingIndex === i ? "⏸" : "🔊"}
+                        </button>
                       </div>
                       <div style={{ fontWeight: 700, fontSize: 15, color: "#e2e8f0", marginBottom: 6, lineHeight: 1.4 }}>{item.titleZh || item.title}</div>
                       {item.summaryZh && (
@@ -1605,7 +1736,7 @@ export default function ChatApp({ user }) {
           )}
 
           {/* Public hall */}
-          {!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && (
+          {!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion && (
             <>
               <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
                 <span style={{ fontSize: 20 }}>💬</span>
@@ -1740,6 +1871,51 @@ export default function ChatApp({ user }) {
                     style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "9px 14px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
                   <button className="sb" onClick={sendGroup} style={{ background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 16px", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>發送 ↑</button>
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* AI Companion chat (AI 爸爸 / AI 媽媽) */}
+          {activeCompanion && (
+            <>
+              <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
+                <div style={{ position: "relative" }}>
+                  <div style={{ width: 34, height: 34, borderRadius: "50%", background: COMPANION_META[activeCompanion].color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{COMPANION_META[activeCompanion].avatar}</div>
+                  <span style={{ position: "absolute", bottom: 0, right: 0, width: 10, height: 10, borderRadius: "50%", background: "#22c55e", border: "2px solid #0f172a" }} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{COMPANION_META[activeCompanion].name}</div>
+                  <div style={{ fontSize: 11, color: "#22c55e" }}>永遠在線 · AI 陪伴角色</div>
+                </div>
+              </div>
+              <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 2, backgroundImage: "radial-gradient(circle at 1px 1px, #1e293b 1px, transparent 0)", backgroundSize: "28px 28px" }}>
+                <div style={{ textAlign: "center", marginBottom: 16 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: COMPANION_META[activeCompanion].color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, margin: "0 auto" }}>{COMPANION_META[activeCompanion].avatar}</div>
+                  <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{COMPANION_META[activeCompanion].name}</div>
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4, maxWidth: 260, margin: "4px auto 0" }}>{COMPANION_META[activeCompanion].intro}</div>
+                </div>
+                {companionMessages.map((msg, i) => {
+                  const isMine = msg.senderId === uid;
+                  return <MessageBubble key={msg.id} msg={msg} isMine={isMine} showSender={!isMine && companionMessages[i-1]?.senderId !== msg.senderId} myUid={uid} collectionPath={["private_chats", companionChatId, "messages", msg.id]} />;
+                })}
+                {companionTyping && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: COMPANION_META[activeCompanion].color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{COMPANION_META[activeCompanion].avatar}</div>
+                    <div style={{ padding: "9px 14px", borderRadius: 18, background: "#1e293b", border: "1px solid #334155", color: "#64748b", fontSize: 13 }}>對方正在輸入…</div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              <div style={{ padding: "10px 14px 14px", background: "#0f172a", borderTop: "1px solid #1e293b", flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input type="text" value={companionInput} onChange={e => setCompanionInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendCompanion()} placeholder={`跟${COMPANION_META[activeCompanion].name}說點什麼...`}
+                    style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "9px 14px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
+                  <button className="sb" onClick={sendCompanion} disabled={!companionInput.trim()}
+                    style={{ background: companionInput.trim() ? "#7c3aed" : "#1e293b", border: "none", borderRadius: 10, padding: "9px 16px", color: companionInput.trim() ? "#fff" : "#475569", cursor: companionInput.trim() ? "pointer" : "default", fontSize: 14, fontWeight: 600, transition: "all 0.15s" }}>
+                    發送 ↑
+                  </button>
+                </div>
+                <div style={{ textAlign: "center", fontSize: 11, color: "#334155", marginTop: 4 }}>AI 陪伴角色會自動回覆，內容僅供陪伴聊天，非專業建議</div>
               </div>
             </>
           )}
