@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildWireframeSvg } from "../lib/designMockupImage.js";
+import { buildWireframeSvg, wireframeDataUrl } from "../lib/designMockupImage.js";
 
 test("buildWireframeSvg returns valid svg for feed target", () => {
   const svg = buildWireframeSvg(
@@ -12,8 +12,7 @@ test("buildWireframeSvg returns valid svg for feed target", () => {
   assert.match(svg, /EVONVCHAT/);
 });
 
-test("buildWireframeSvg varies layout by target name", () => {
-  const chatSvg = buildWireframeSvg({ name: "聊天室首頁", focus: "大廳" }, { label: "slot" });
-  const cinemaSvg = buildWireframeSvg({ name: "電影院", focus: "直播" }, { label: "slot" });
-  assert.notEqual(chatSvg, cinemaSvg);
+test("wireframeDataUrl returns embeddable svg data url", () => {
+  const url = wireframeDataUrl({ name: "動態消息", focus: "貼文卡片" }, { label: "slot" });
+  assert.match(url, /^data:image\/svg\+xml;base64,/);
 });

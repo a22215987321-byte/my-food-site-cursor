@@ -94,7 +94,7 @@ function DesignPostBadge({ post }) {
   const mockupLabel =
     post.designMockupEngine === "gemini"
       ? "AI 概念圖"
-      : post.designMockupEngine === "wireframe"
+      : post.designMockupEngine === "wireframe" || post.designMockupEngine === "wireframe-inline"
       ? "線框 mockup"
       : post.imageUrl
       ? "設計 mockup"
