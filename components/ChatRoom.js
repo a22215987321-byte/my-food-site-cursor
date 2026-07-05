@@ -660,8 +660,8 @@ export default function ChatApp({ user }) {
   const [donations,        setDonations]        = useState([]);
   const [showDonateModal,  setShowDonateModal]  = useState(false);
 
-  // AI Companion (AI 父親 / AI 母親) states
-  const [activeCompanion,   setActiveCompanion]   = useState(null); // null | 'father' | 'mother'
+  // AI Companion states
+  const [activeCompanion,   setActiveCompanion]   = useState(null);
   const [companionMessages, setCompanionMessages] = useState([]);
   const [companionInput,    setCompanionInput]    = useState("");
   const [companionTyping,   setCompanionTyping]   = useState(false);
@@ -1120,7 +1120,7 @@ export default function ChatApp({ user }) {
       const res = await fetch("/api/ai-companion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, message: text, history, nickname: myProfile.nickname }),
+        body: JSON.stringify({ role, message: text, history, nickname: myProfile.nickname, userId: uid }),
       });
       const data = await res.json();
       const reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
@@ -1615,7 +1615,7 @@ export default function ChatApp({ user }) {
             <span style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase" }}>AI 陪伴</span>
           </div>
           <div style={{ padding: "0 8px 6px" }}>
-            {["father", "mother", "brother"].map(role => {
+            {["father", "mother", "brother", "artstudent", "artteacher"].map(role => {
               const meta = COMPANION_META[role];
               const isActive = activeCompanion === role;
               return (
@@ -2135,7 +2135,7 @@ export default function ChatApp({ user }) {
             </>
           )}
 
-          {/* AI Companion chat (AI 爸爸 / AI 媽媽 / AI 哥哥) */}
+          {/* AI Companion chat */}
           {activeCompanion && (
             <>
               <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
@@ -2184,6 +2184,8 @@ export default function ChatApp({ user }) {
                 <div style={{ textAlign: "center", fontSize: 11, color: "#334155", marginTop: 4 }}>
                   {activeCompanion === "father"
                     ? "AI 爸爸每日吸收最新財經新聞，回覆僅供陪伴聊天，非投資建議"
+                    : activeCompanion === "artstudent" || activeCompanion === "artteacher"
+                    ? "AI 設計角色會討論 EVONVCHAT 頁面作品，實際改版仍需人工確認"
                     : "AI 陪伴角色會自動回覆，內容僅供陪伴聊天，非專業建議"}
                 </div>
               </div>

@@ -48,6 +48,47 @@ function Avatar({ avatar, color, size = 40 }) {
   );
 }
 
+function DesignPostBadge({ post }) {
+  if (!post.isAiDesignPost) return null;
+
+  const isTraining = post.designPostType === "teacher_training";
+  const statusText =
+    post.reviewStatus === "approved"
+      ? "已通過"
+      : post.reviewStatus === "revision_required"
+      ? "打回重做"
+      : isTraining
+      ? "每日訓練"
+      : "審核中";
+  const statusColor =
+    post.reviewStatus === "approved"
+      ? "#22c55e"
+      : post.reviewStatus === "revision_required"
+      ? "#f59e0b"
+      : "#06b6d4";
+
+  return (
+    <div style={{ padding: "0 16px 10px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <span style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 9px", borderRadius: 999, letterSpacing: 0.5 }}>
+        AI設計工作室
+      </span>
+      <span style={{ background: "rgba(15,23,42,0.78)", border: `1px solid ${statusColor}`, color: statusColor, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999 }}>
+        {statusText}
+      </span>
+      {post.designTargetName && (
+        <span style={{ color: "#94a3b8", fontSize: 11 }}>
+          研究頁面：{post.designTargetName}
+        </span>
+      )}
+      {post.designSlotLabel && (
+        <span style={{ color: "#64748b", fontSize: 11 }}>
+          {post.designSlotLabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function CommentSection({ postId, myProfile }) {
   const [comments, setComments] = useState([]);
   const [text, setText] = useState("");
@@ -114,7 +155,7 @@ function CommentSection({ postId, myProfile }) {
 }
 
 function PostCard({ post, myUid, myProfile }) {
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(!!post.isAiDesignPost);
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const liked = (post.likes || []).includes(myUid);
@@ -169,6 +210,8 @@ function PostCard({ post, myUid, myProfile }) {
           </div>
         )}
       </div>
+
+      <DesignPostBadge post={post} />
 
       {/* Text */}
       {post.text && (

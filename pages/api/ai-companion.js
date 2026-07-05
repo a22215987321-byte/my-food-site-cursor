@@ -9,6 +9,7 @@ import {
   isFinanceTopic,
 } from "../../lib/financeNews";
 import { extractFirstUrl, fetchUrlSummaryData, buildRuleBasedUrlSummary } from "../../lib/urlSummary";
+import { callFinanceAgent } from "../../lib/financeAgentClient";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -21,6 +22,12 @@ const PERSONA_PROMPT = {
   brother:
     "你是使用者的「AI 哥哥」，年紀比使用者稍長、講話直接又帶點幽默的哥哥類型，像真的兄弟聊天一樣輕鬆，不拘謹、不說教。" +
     "你有一個特殊專長：如果對方貼網址給你，你會讀懂網頁的重點、講清楚這個網址大概是做什麼用的，並補充你自己直白的看法或建議。",
+  artstudent:
+    "你是 EVONVCHAT 的「AI美術生」，每天學習聊天室、動態消息、個人頁與其他頁面設計。" +
+    "你會用學生但認真的語氣提出文字版設計草案，內容要包含觀察、設計目標、版面/配色/互動建議與可實作的 React/CSS 方向。",
+  artteacher:
+    "你是 EVONVCHAT 的「AI美術師」，負責每天訓練 AI美術生，像專業設計總監一樣審核作品。" +
+    "你重視視覺一致性、使用者體驗、資訊層級與可實作性；不滿意的作品要明確指出問題並要求重做。",
 };
 
 const ROLE_EXTRA_RULE = {
@@ -29,6 +36,12 @@ const ROLE_EXTRA_RULE = {
   brother:
     "5. 若下方有「網址內容摘要」，請先用 1～2 句說明這個網址的用途／主題，接著條列 2～3 個重點，最後用一句「哥哥看法：」給你自己直白的意見。\n" +
     "6. 若下方顯示網址讀取失敗，直接跟對方說你打不開這個連結（可能對方網站擋了自動讀取），請他貼文字重點或多講一點背景，不要假裝你看過內容。",
+  artstudent:
+    "5. 回覆要像設計學生日誌，不要空泛稱讚；至少提出 2 個具體畫面改進點。\n" +
+    "6. 若對方問頁面設計，請用「觀察 / 改版方向 / 可實作建議」三段簡短回覆。",
+  artteacher:
+    "5. 回覆要像嚴格但願意教的設計老師；先判斷是否合格，再列出要修改的重點。\n" +
+    "6. 不要只說好看或不好看，必須說明理由，並給出下一次訓練要求。",
 };
 
 async function callGemini(role, message, history, nickname, apiKey, extraContext) {
@@ -87,7 +100,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { role, message, history, nickname } = req.body || {};
+  const { role, message, history, nickname, userId } = req.body || {};
   if (!role || !COMPANION_META[role] || !message) {
     res.status(400).json({ error: "invalid request" });
     return;
@@ -113,6 +126,26 @@ export default async function handler(req, res) {
       }
     } catch (err) {
       console.error("[ai-companion] finance news load failed:", err.message);
+    }
+
+    const agentResult = await callFinanceAgent({
+      userId,
+      message,
+      history: safeHistory,
+      nickname,
+      financeNews,
+    });
+    if (agentResult?.reply) {
+      res.status(200).json({
+        reply: agentResult.reply,
+        engine: "finance-agent",
+        financeAware: true,
+        citations: agentResult.citations || [],
+        usedTools: agentResult.usedTools || [],
+        warnings: agentResult.warnings || [],
+        numericValidation: agentResult.numericValidation,
+      });
+      return;
     }
   } else if (role === "brother") {
     const url = extractFirstUrl(message);
