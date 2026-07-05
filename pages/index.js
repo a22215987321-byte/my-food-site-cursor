@@ -211,7 +211,10 @@ export default function Home() {
   const handleGoogleLogin = async () => {
     setAuthError('');
     try { await signInWithPopup(auth, googleProvider); }
-    catch { setAuthError('Google 登入失敗，請稍後再試'); }
+    catch (e) {
+      console.error('[auth] Google login failed:', e);
+      setAuthError(`Google 登入失敗：${e?.code || '請稍後再試'}`);
+    }
   };
 
   const handleSetup = async () => {
