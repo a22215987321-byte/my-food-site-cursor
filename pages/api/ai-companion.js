@@ -15,8 +15,7 @@ import {
   buildDesignTrainingFallbackReply,
   executeDesignFeedRun,
   formatDesignFeedContextForPrompt,
-  isDesignForceRepostCommand,
-  isDesignTrainingCommand,
+  shouldTriggerDesignFeed,
 } from "../../lib/designFeedService";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -123,13 +122,17 @@ export default async function handler(req, res) {
   let extraContext = "";
   let designFeedResult = null;
 
-  if (role === "artteacher" && userId && (isDesignTrainingCommand(message) || isDesignForceRepostCommand(message))) {
+  const designFeedTrigger = shouldTriggerDesignFeed(role, message);
+  if (userId && designFeedTrigger.trigger) {
     try {
       designFeedResult = await executeDesignFeedRun({
         force: true,
-        forceWrite: isDesignForceRepostCommand(message),
+        forceWrite: designFeedTrigger.forceWrite,
       });
       extraContext += formatDesignFeedContextForPrompt(designFeedResult);
+      if (role === "artstudent") {
+        extraContext += "\n請用 AI美術生的語氣告知使用者：你的設計作品已交到動態消息，等待 AI美術師審核。";
+      }
     } catch (err) {
       console.error("[ai-companion] design feed trigger failed:", err.message);
       extraContext +=
@@ -227,9 +230,9 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (role === "artteacher" && designFeedResult) {
+  if ((role === "artteacher" || role === "artstudent") && designFeedResult) {
     res.status(200).json({
-      reply: buildDesignTrainingFallbackReply(designFeedResult, nickname),
+      reply: buildDesignTrainingFallbackReply(designFeedResult, nickname, role),
       engine: "rule",
       designFeedTriggered: true,
       designFeed: {

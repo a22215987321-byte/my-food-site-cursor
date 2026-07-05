@@ -30,6 +30,20 @@ const STATUS_EMOJIS = ["😊","😴","🎮","📚","🏃","🎵","☕","🔕"];
 const AVATAR_EMOJIS = ["😊","👨‍💻","📚","🏃","🎮","🎨","🍜","🌸","🦊","🐼","🎧","⚡"];
 const COLORS = ["#3b82f6","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#06b6d4","#84cc16"];
 
+const ART_DESIGN_QUICK_ACTIONS = {
+  artteacher: [
+    { label: "🎨 開始訓練", text: "訓練吧" },
+    { label: "📋 今日訓練", text: "今日訓練" },
+    { label: "🔁 再交一份", text: "再交一份" },
+    { label: "📰 看動態", href: "/feed" },
+  ],
+  artstudent: [
+    { label: "📐 交設計稿", text: "交作品" },
+    { label: "❓ 今天學什麼", text: "今天應該學哪個 EVONVCHAT 頁面？" },
+    { label: "📰 看動態", href: "/feed" },
+  ],
+};
+
 function formatTime(ts) {
   if (!ts) return "";
   const d = ts.toDate ? ts.toDate() : new Date(ts);
@@ -1152,16 +1166,17 @@ export default function ChatApp({ user }) {
     });
   }, [privateInput, activeFriendId, myProfile, uid, chatId]);
 
-  const sendCompanion = useCallback(async () => {
-    if (!companionInput.trim() || !activeCompanion || !myProfile) return;
-    const text = companionInput.trim();
+  const sendCompanion = useCallback(async (overrideText) => {
+    const text = (typeof overrideText === "string" ? overrideText : companionInput).trim();
+    if (!text || !activeCompanion || !myProfile) return;
+    const fromQuickAction = typeof overrideText === "string";
+    if (!fromQuickAction) setCompanionInput("");
     const role = activeCompanion;
     const cid = companionChatId;
     const history = companionMessages.slice(-8).map(m => ({
       role: m.senderId === uid ? "user" : "assistant",
       text: m.text || "",
     }));
-    setCompanionInput("");
     await addDoc(collection(db, 'private_chats', cid, 'messages'), {
       senderId: uid, sender: myProfile.nickname, avatar: myProfile.avatar,
       senderAvatarImage: myProfile.avatarImage || "",
@@ -1169,7 +1184,7 @@ export default function ChatApp({ user }) {
     });
     setCompanionTyping(true);
     const meta = COMPANION_META[role];
-    const requestTimeout = role === "artteacher" ? 45000 : 28000;
+    const requestTimeout = role === "artteacher" || role === "artstudent" ? 45000 : 28000;
     try {
       const res = await fetchWithTimeout("/api/ai-companion", {
         method: "POST",
@@ -2261,10 +2276,48 @@ export default function ChatApp({ user }) {
                 <div ref={messagesEndRef} />
               </div>
               <div style={{ padding: "10px 14px 14px", background: "#0f172a", borderTop: "1px solid #1e293b", flexShrink: 0 }}>
+                {ART_DESIGN_QUICK_ACTIONS[activeCompanion]?.length > 0 && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                    {ART_DESIGN_QUICK_ACTIONS[activeCompanion].map((action) => {
+                      const chipStyle = {
+                        background: "#1e293b",
+                        border: "1px solid #334155",
+                        borderRadius: 999,
+                        padding: "6px 12px",
+                        color: "#c4b5fd",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: companionTyping ? "default" : "pointer",
+                        opacity: companionTyping ? 0.55 : 1,
+                        textDecoration: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                      };
+                      if (action.href) {
+                        return (
+                          <Link key={action.label} href={action.href} style={chipStyle}>
+                            {action.label}
+                          </Link>
+                        );
+                      }
+                      return (
+                        <button
+                          key={action.label}
+                          type="button"
+                          onClick={() => sendCompanion(action.text)}
+                          disabled={companionTyping}
+                          style={{ ...chipStyle, fontFamily: "inherit" }}
+                        >
+                          {action.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   <input type="text" value={companionInput} onChange={e => setCompanionInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendCompanion()} placeholder={`跟${COMPANION_META[activeCompanion].name}說點什麼...`}
                     style={{ flex: 1, background: "#1e293b", border: "1px solid #334155", borderRadius: 12, padding: "9px 14px", color: "#e2e8f0", fontSize: 14, outline: "none" }} />
-                  <button className="sb" onClick={sendCompanion} disabled={!companionInput.trim()}
+                  <button className="sb" onClick={() => sendCompanion()} disabled={!companionInput.trim()}
                     style={{ background: companionInput.trim() ? "#7c3aed" : "#1e293b", border: "none", borderRadius: 10, padding: "9px 16px", color: companionInput.trim() ? "#fff" : "#475569", cursor: companionInput.trim() ? "pointer" : "default", fontSize: 14, fontWeight: 600, transition: "all 0.15s" }}>
                     發送 ↑
                   </button>
