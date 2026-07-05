@@ -6,12 +6,14 @@
     { "path": "/api/ai-news", "schedule": "0 0 * * *" },
     { "path": "/api/finance-news", "schedule": "0 1 * * *" },
     { "path": "/api/finance-daily-brief?refresh=1", "schedule": "30 16 * * *" },
-    { "path": "/api/design-feed-run?refresh=1", "schedule": "0 */2 * * *" }
+    { "path": "/api/finance-mentor-run?refresh=1", "schedule": "0 17 * * *" },
+    { "path": "/api/design-feed-run?refresh=1", "schedule": "30 18 * * *" }
   ],
   "functions": {
     "pages/api/ai-news.js": { "maxDuration": 30 },
     "pages/api/finance-news.js": { "maxDuration": 30 },
     "pages/api/finance-daily-brief.js": { "maxDuration": 30 },
+    "pages/api/finance-mentor-run.js": { "maxDuration": 30 },
     "pages/api/design-feed-run.js": { "maxDuration": 30 },
     "pages/api/ai-companion.js": { "maxDuration": 25 }
   }
