@@ -48,6 +48,30 @@ function Avatar({ avatar, color, size = 40 }) {
   );
 }
 
+function FinanceMentorPostBadge({ post }) {
+  if (!post.isAiFinanceMentorPost) return null;
+
+  const statusText =
+    post.reviewStatus === "needs_attention" ? "需改進" : "每日訓練";
+  const statusColor = post.reviewStatus === "needs_attention" ? "#f59e0b" : "#0ea5e9";
+
+  return (
+    <div style={{ padding: "0 16px 10px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <span style={{ background: "linear-gradient(135deg,#0ea5e9,#6366f1)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 9px", borderRadius: 999, letterSpacing: 0.5 }}>
+        AI財經導師
+      </span>
+      <span style={{ background: "rgba(15,23,42,0.78)", border: `1px solid ${statusColor}`, color: statusColor, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999 }}>
+        {statusText}
+      </span>
+      {post.financeMentorDateKey && (
+        <span style={{ color: "#64748b", fontSize: 11 }}>
+          {post.financeMentorDateKey}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function DesignPostBadge({ post }) {
   if (!post.isAiDesignPost) return null;
 
@@ -155,7 +179,7 @@ function CommentSection({ postId, myProfile }) {
 }
 
 function PostCard({ post, myUid, myProfile }) {
-  const [showComments, setShowComments] = useState(!!post.isAiDesignPost);
+  const [showComments, setShowComments] = useState(!!post.isAiDesignPost || !!post.isAiFinanceMentorPost);
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const liked = (post.likes || []).includes(myUid);
@@ -212,6 +236,7 @@ function PostCard({ post, myUid, myProfile }) {
       </div>
 
       <DesignPostBadge post={post} />
+      <FinanceMentorPostBadge post={post} />
 
       {/* Text */}
       {post.text && (

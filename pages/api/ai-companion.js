@@ -10,6 +10,7 @@ import {
 } from "../../lib/financeNews";
 import { extractFirstUrl, fetchUrlSummaryData, buildRuleBasedUrlSummary } from "../../lib/urlSummary";
 import { callFinanceAgent } from "../../lib/financeAgentClient";
+import { formatMentorContextForPrompt, buildMentorContextPayload, loadActiveMentorDirective } from "../../lib/financeMentorMemory";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -114,13 +115,23 @@ export default async function handler(req, res) {
   let extraContext = "";
 
   if (role === "father") {
+    let mentorContextPayload = null;
+    try {
+      const directive = await loadActiveMentorDirective();
+      mentorContextPayload = buildMentorContextPayload(directive);
+      const mentorPrompt = formatMentorContextForPrompt(directive);
+      if (mentorPrompt) extraContext += mentorPrompt;
+    } catch (err) {
+      console.error("[ai-companion] mentor context load failed:", err.message);
+    }
+
     try {
       const allNews = await loadFinanceNews();
       const relevant = findRelevantFinanceNews(message, allNews, 5);
       financeNews = relevant.length ? relevant : allNews.slice(0, 5);
       const financeContext = formatFinanceContextForPrompt(financeNews);
       if (financeContext) {
-        extraContext =
+        extraContext +=
           `\n\n【今日最新財經新聞摘要（請在相關時引用，並給出你的看法）】\n${financeContext}\n` +
           "回覆時若涉及投資或市場，務必提醒風險、不要給具體買賣指令，僅供陪伴聊天參考。";
       }
@@ -134,6 +145,7 @@ export default async function handler(req, res) {
       history: safeHistory,
       nickname,
       financeNews,
+      mentorContext: mentorContextPayload,
     });
     if (agentResult?.reply) {
       res.status(200).json({

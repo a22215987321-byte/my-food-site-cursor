@@ -1,0 +1,26 @@
+---
+description: AI Dad finance accuracy, data-flow review, and testing standards
+globs: components/ChatRoom.js,lib/aiCompanion.js,lib/finance*.js,lib/urlSummary.js,pages/api/ai-companion.js,pages/api/finance*.js,finance_agent.py
+alwaysApply: false
+---
+
+# 財經 AI 爸爸開發規範
+
+修改 AI 爸爸、財經新聞、每日總結、股票/財報/技術指標相關程式碼時，必須遵守：
+
+- 角色判斷：以資深 Wall Street 財經系統架構師兼 AI 導師角度審查，不只修 UI，也要檢查資料流與財經語意是否合理。
+- 資料流先行：修改前先追蹤輸入資料、API 回傳、清洗/摘要、提示詞、前端顯示的完整資料結構；必要時使用專案探索/審查工具或 Agent Skills 蒐集上下文。
+- 數值安全：任何股票價格、財報數字、報酬率、KDJ、RSI、MA、成交量等計算都必須先驗證 `Number.isFinite()`，不得讓 `NaN`、`Infinity` 或空值進入提示詞、UI 或儲存層。
+- 指標防呆：分母為 0、資料點不足、日期缺口、非交易日、缺失 OHLCV、字串數字、百分比單位轉換都要明確處理；不要用靜默 fallback 假裝數據有效。
+- 投資建議邊界：AI 爸爸可以解釋風險與情境，但不得輸出具體買賣指令；涉及市場判斷要標示僅供陪伴聊天參考、非投資建議。
+- 測試驅動：修正或新增財經邏輯後，主動在 Cursor 終端機建立並執行 mock 財經數據測試，至少覆蓋正常資料、缺失資料、分母為 0、極端值與資料不足案例。
+- 回覆品質：長財經摘要要分段、保留換行，避免一大坨文字；每段要有重點、影響、風險或看法，不要空泛安慰。
+
+示例：
+
+```js
+const value = Number(rawValue);
+if (!Number.isFinite(value)) {
+  throw new Error(`Invalid finance value: ${rawValue}`);
+}
+```
