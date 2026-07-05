@@ -120,7 +120,7 @@ function DesignPostBadge({ post }) {
       )}
       {post.designSlotLabel && (
         <span style={{ color: "#64748b", fontSize: 11 }}>
-          {post.designSlotLabel}
+          {post.designSlotLabel}{post.designAttemptNum > 1 ? ` · v${post.designAttemptNum}` : ""}
         </span>
       )}
     </div>
