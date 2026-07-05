@@ -91,6 +91,15 @@ function DesignPostBadge({ post }) {
       ? "#f59e0b"
       : "#06b6d4";
 
+  const mockupLabel =
+    post.designMockupEngine === "gemini"
+      ? "AI 概念圖"
+      : post.designMockupEngine === "wireframe"
+      ? "線框 mockup"
+      : post.imageUrl
+      ? "設計 mockup"
+      : null;
+
   return (
     <div style={{ padding: "0 16px 10px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
       <span style={{ background: "linear-gradient(135deg,#8b5cf6,#06b6d4)", color: "#fff", fontSize: 11, fontWeight: 800, padding: "4px 9px", borderRadius: 999, letterSpacing: 0.5 }}>
@@ -99,6 +108,11 @@ function DesignPostBadge({ post }) {
       <span style={{ background: "rgba(15,23,42,0.78)", border: `1px solid ${statusColor}`, color: statusColor, fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 999 }}>
         {statusText}
       </span>
+      {mockupLabel && post.designPostType === "student_submission" && (
+        <span style={{ color: "#a78bfa", fontSize: 11, fontWeight: 600 }}>
+          {mockupLabel}{post.designTargetName ? ` · ${post.designTargetName}` : ""}
+        </span>
+      )}
       {post.designTargetName && (
         <span style={{ color: "#94a3b8", fontSize: 11 }}>
           研究頁面：{post.designTargetName}
@@ -248,7 +262,11 @@ function PostCard({ post, myUid, myProfile }) {
       {/* Image */}
       {post.imageUrl && (
         <div style={{ width: "100%", maxHeight: 480, overflow: "hidden", background: "#0f172a" }}>
-          <img src={post.imageUrl} alt="貼文圖片" style={{ width: "100%", maxHeight: 480, objectFit: "contain", display: "block" }} />
+          <img
+            src={post.imageUrl}
+            alt={post.isAiDesignPost ? `AI美術生 設計 mockup - ${post.designTargetName || "EVONVCHAT"}` : "貼文圖片"}
+            style={{ width: "100%", maxHeight: 480, objectFit: "contain", display: "block" }}
+          />
         </div>
       )}
 
