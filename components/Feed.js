@@ -291,7 +291,7 @@ function PostCard({ post, myUid, myProfile }) {
   );
 }
 
-function NewPostForm({ myProfile, onPosted }) {
+function NewPostForm({ myProfile, authUid, onPosted }) {
   const [text, setText] = useState("");
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaType, setMediaType] = useState(null);
@@ -325,8 +325,10 @@ function NewPostForm({ myProfile, onPosted }) {
         if (mediaType === "video") videoUrl = url;
         else imageUrl = url;
       }
+      const uid = authUid || auth.currentUser?.uid || myProfile.uid;
+      if (!uid) throw new Error("auth/missing-uid");
       await addDoc(collection(db, "posts"), {
-        userId: myProfile.uid,
+        userId: uid,
         userNickname: myProfile.nickname,
         userAvatar: myProfile.avatar,
         userColor: myProfile.color,
@@ -339,8 +341,9 @@ function NewPostForm({ myProfile, onPosted }) {
       setText("");
       removeMedia();
       onPosted?.();
-    } catch {
-      alert("發佈失敗，請重試");
+    } catch (err) {
+      console.error("[feed] publish failed:", err);
+      alert(`發佈失敗：${err?.code || err?.message || "請重試"}`);
     } finally {
       setPosting(false);
     }
@@ -401,7 +404,7 @@ export default function FeedApp({ user }) {
 
   useEffect(() => {
     return onSnapshot(doc(db, "users", user.uid), snap => {
-      if (snap.exists()) setMyProfile({ uid: user.uid, ...snap.data() });
+      if (snap.exists()) setMyProfile({ ...snap.data(), uid: user.uid });
     });
   }, [user.uid]);
 
@@ -452,7 +455,7 @@ export default function FeedApp({ user }) {
 
         {/* Content */}
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 16px" }} ref={topRef}>
-          <NewPostForm myProfile={myProfile} />
+          <NewPostForm myProfile={myProfile} authUid={user.uid} />
 
           {posts.length === 0 && (
             <div style={{ textAlign: "center", padding: "60px 0", color: "#475569" }}>
