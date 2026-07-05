@@ -4,6 +4,7 @@ import { auth, db } from "../lib/firebase";
 import AvatarCreator from "./AvatarCreator";
 import CalendarMemo from "./CalendarMemo";
 import { generateCompanionReply, COMPANION_META } from "../lib/aiCompanion";
+import { getTaipeiDateKey } from "../lib/financeDailyBrief";
 import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, orderBy, limitToLast, serverTimestamp,
@@ -663,10 +664,34 @@ export default function ChatApp({ user }) {
   // AI Companion states
   const [activeCompanion,   setActiveCompanion]   = useState(null);
   const [companionMessages, setCompanionMessages] = useState([]);
+  const [companionMessagesLoaded, setCompanionMessagesLoaded] = useState(false);
   const [companionInput,    setCompanionInput]    = useState("");
   const [companionTyping,   setCompanionTyping]   = useState(false);
   const [fatherBriefLoading, setFatherBriefLoading] = useState(false);
   const fatherBriefPostingRef = useRef(false);
+  const companionMessagesRef = useRef([]);
+
+  function hasFatherBriefForToday(messages, dateKey) {
+    const label = dateKey.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) => `${y}年${Number(m)}月${Number(d)}日`);
+    return messages.some(
+      (m) =>
+        m.senderId === "aifather" &&
+        (m.briefDate === dateKey ||
+          (m.dailyBrief === true && m.briefDate) ||
+          (typeof m.text === "string" && m.text.includes("爸爸今日財經總結") && m.text.includes(label)))
+    );
+  }
+
+  async function fetchWithTimeout(url, options = {}, timeoutMs = 25000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      return res;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
   // 用跟真人好友私訊完全相同的 ID 規則（[uid, 對方id].sort().join('_')），
   // 這樣既有的 private_chats 安全規則不需要另外調整就能套用在 AI 陪伴聊天上。
   const companionChatId = activeCompanion ? [uid, `ai${activeCompanion}`].sort().join('_') : null;
@@ -676,6 +701,24 @@ export default function ChatApp({ user }) {
   const [aiNewsItems,  setAiNewsItems]  = useState([]);
   const [aiNewsLoading, setAiNewsLoading] = useState(false);
   const [aiNewsError,  setAiNewsError]  = useState(false);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const update = () => {
+      setIsMobile(mq.matches);
+      if (!mq.matches) setMobileShowChat(false);
+    };
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+
+  const openMobileChat = useCallback(() => {
+    if (isMobile) setMobileShowChat(true);
+  }, [isMobile]);
 
   const loadAiNews = useCallback(async () => {
     setAiNewsLoading(true);
@@ -875,44 +918,51 @@ export default function ChatApp({ user }) {
 
   // AI Companion messages listener
   useEffect(() => {
-    if (!activeCompanion) { setCompanionMessages([]); return; }
+    if (!activeCompanion) {
+      setCompanionMessages([]);
+      setCompanionMessagesLoaded(false);
+      return;
+    }
+    setCompanionMessagesLoaded(false);
     const q = query(collection(db, 'private_chats', companionChatId, 'messages'), orderBy('createdAt'), limitToLast(50));
     return onSnapshot(q, snap => {
       setCompanionMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setCompanionMessagesLoaded(true);
     });
   }, [uid, activeCompanion]);
+
+  useEffect(() => {
+    companionMessagesRef.current = companionMessages;
+  }, [companionMessages]);
 
   // 開啟 AI 爸爸時預熱財經新聞，並自動推送當日總結（每天一則）
   useEffect(() => {
     if (activeCompanion !== "father") {
       fatherBriefPostingRef.current = false;
+      setFatherBriefLoading(false);
       return;
     }
-    if (!companionChatId || !uid) return;
+    if (!companionChatId || !uid || !companionMessagesLoaded) return;
+
+    const dateKey = getTaipeiDateKey();
+    const msgs = companionMessagesRef.current;
+    if (hasFatherBriefForToday(msgs, dateKey) || fatherBriefPostingRef.current) return;
 
     let cancelled = false;
-    const alreadyPosted = companionMessages.some(
-      (m) => m.senderId === "aifather" && m.dailyBrief === true && m.briefDate
-    );
-    if (alreadyPosted || fatherBriefPostingRef.current) return;
+    fatherBriefPostingRef.current = true;
 
     (async () => {
       setFatherBriefLoading(true);
       try {
         fetch("/api/finance-news").catch(() => {});
-        const res = await fetch("/api/finance-daily-brief");
+        const res = await fetchWithTimeout("/api/finance-daily-brief", {}, 25000);
         const data = await res.json();
         const parts = Array.isArray(data.parts) && data.parts.length ? data.parts : (data.summary ? [data.summary] : []);
         if (cancelled || !parts.length || !data.dateKey) return;
 
-        const dup = companionMessages.some(
-          (m) => m.senderId === "aifather" && m.briefDate === data.dateKey
-        );
-        if (dup || fatherBriefPostingRef.current) return;
+        if (hasFatherBriefForToday(companionMessagesRef.current, data.dateKey)) return;
 
-        fatherBriefPostingRef.current = true;
         const meta = COMPANION_META.father;
-        // 分成好幾則訊息依序送出，模擬真人一句一句聊天，而不是丟一大段文字
         for (let i = 0; i < parts.length; i++) {
           if (cancelled) break;
           await addDoc(collection(db, "private_chats", companionChatId, "messages"), {
@@ -929,14 +979,17 @@ export default function ChatApp({ user }) {
         }
       } catch (err) {
         console.error("[father-daily-brief] auto-post failed:", err);
-        fatherBriefPostingRef.current = false;
       } finally {
+        fatherBriefPostingRef.current = false;
         if (!cancelled) setFatherBriefLoading(false);
       }
     })();
 
-    return () => { cancelled = true; };
-  }, [activeCompanion, companionChatId, uid, companionMessages]);
+    return () => {
+      cancelled = true;
+      setFatherBriefLoading(false);
+    };
+  }, [activeCompanion, companionChatId, uid, companionMessagesLoaded]);
 
   // Groups listener
   useEffect(() => {
@@ -1117,11 +1170,11 @@ export default function ChatApp({ user }) {
     setCompanionTyping(true);
     const meta = COMPANION_META[role];
     try {
-      const res = await fetch("/api/ai-companion", {
+      const res = await fetchWithTimeout("/api/ai-companion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, message: text, history, nickname: myProfile.nickname, userId: uid }),
-      });
+      }, 28000);
       const data = await res.json();
       const reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
       await addDoc(collection(db, 'private_chats', cid, 'messages'), {
@@ -1419,6 +1472,28 @@ export default function ChatApp({ user }) {
         .sb:hover:not(:disabled) { background: #7c3aed !important; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .chat-layout { height: 100dvh; }
+        .chat-sidebar { min-height: 0; }
+        .chat-sidebar-scroll {
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+        }
+        @media (max-width: 768px) {
+          .chat-sidebar { width: 100% !important; max-width: 100%; }
+          .chat-main { display: none !important; min-width: 0 !important; width: 100%; flex: 1; }
+          .chat-calendar { display: none !important; }
+          .chat-layout.mobile-show-chat .chat-sidebar { display: none !important; }
+          .chat-layout.mobile-show-chat .chat-main {
+            display: flex !important;
+            flex-direction: column;
+            width: 100%;
+            min-width: 0;
+            flex: 1;
+          }
+        }
       `}</style>
 
       {showProfile    && <ProfilePage myProfile={myProfile} friendProfiles={friendProfiles} onSave={handleSaveProfile} onClose={() => setShowProfile(false)} />}
@@ -1458,7 +1533,7 @@ export default function ChatApp({ user }) {
             👤 個人資料
           </button>
           <div style={{ height: 1, background: "#334155", margin: "4px 0" }} />
-          <button onClick={() => { setActiveFriendId(contextMenu.friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); setContextMenu(null); }}
+          <button onClick={() => { setActiveFriendId(contextMenu.friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); setContextMenu(null); openMobileChat(); }}
             style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "9px 14px", color: "#e2e8f0", background: "none", border: "none", textAlign: "left", fontSize: 13, cursor: "pointer" }}
             onMouseEnter={e => e.currentTarget.style.background = "#334155"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -1487,7 +1562,7 @@ export default function ChatApp({ user }) {
                 {friendInfo.bio && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 10, lineHeight: 1.6 }}>{friendInfo.bio}</div>}
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-                <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); setFriendInfo(null); }}
+                <button onClick={() => { setActiveFriendId(friendInfo.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); setFriendInfo(null); openMobileChat(); }}
                   style={{ flex: 1, background: "#7c3aed", border: "none", borderRadius: 10, padding: "9px 0", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   💬 傳訊息
                 </button>
@@ -1501,13 +1576,13 @@ export default function ChatApp({ user }) {
         </div>
       )}
 
-      <div style={{ display: "flex", height: "100vh", background: "#0a0f1e", color: "#e2e8f0", fontFamily: "'Inter','Helvetica Neue',sans-serif", overflow: "hidden" }}>
+      <div className={`chat-layout${isMobile && mobileShowChat ? " mobile-show-chat" : ""}`} style={{ display: "flex", background: "#0a0f1e", color: "#e2e8f0", fontFamily: "'Inter','Helvetica Neue',sans-serif", overflow: "hidden" }}>
 
         {/* ── Sidebar ── */}
-        <div style={{ width: 280, background: "#0f172a", borderRight: "1px solid #1e293b", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        <div className="chat-sidebar" style={{ width: 280, background: "#0f172a", borderRight: "1px solid #1e293b", display: "flex", flexDirection: "column", flexShrink: 0, height: "100%" }}>
 
           {/* My info */}
-          <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid #1e293b" }}>
+          <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid #1e293b", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <button onClick={() => setShowProfile(true)} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", flexShrink: 0 }}>
                 <AvatarImg avatarImage={myProfile.avatarImage} avatar={myProfile.avatar} color={myProfile.color} size={42} />
@@ -1528,6 +1603,7 @@ export default function ChatApp({ user }) {
             </div>
           </div>
 
+          <div className="chat-sidebar-scroll">
           {/* Friend request banner */}
           {pendingInCount > 0 && (
             <button onClick={() => setShowFriendReqs(true)}
@@ -1561,7 +1637,7 @@ export default function ChatApp({ user }) {
 
           {/* Hall button */}
           <div style={{ padding: "4px 10px 0" }}>
-            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "act" : ""}`}
+            <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ position: "relative", flexShrink: 0 }}>
                 <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
@@ -1576,7 +1652,7 @@ export default function ChatApp({ user }) {
 
           {/* Leaderboard button */}
           <div style={{ padding: "4px 10px 6px" }}>
-            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${showLeaderboard ? "act" : ""}`}
+            <button onClick={() => { setShowLeaderboard(true); setActiveFriendId(null); setActiveGroupId(null); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }} className={`fb ${showLeaderboard ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showLeaderboard ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#f59e0b,#fbbf24,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🏆</div>
               <div>
@@ -1588,7 +1664,7 @@ export default function ChatApp({ user }) {
 
           {/* Cinema button */}
           <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${showCinema ? "act" : ""}`}
+            <button onClick={() => { setShowCinema(true); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }} className={`fb ${showCinema ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showCinema ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#4c1d95,#0891b2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🎬</div>
               <div>
@@ -1600,7 +1676,7 @@ export default function ChatApp({ user }) {
 
           {/* AI News button */}
           <div style={{ padding: "0 10px 6px" }}>
-            <button onClick={() => { setShowAiNews(true); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setActiveCompanion(null); }} className={`fb ${showAiNews ? "act" : ""}`}
+            <button onClick={() => { setShowAiNews(true); setShowCinema(false); setShowLeaderboard(false); setActiveFriendId(null); setActiveGroupId(null); setActiveCompanion(null); openMobileChat(); }} className={`fb ${showAiNews ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: showAiNews ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
               <div>
@@ -1619,7 +1695,7 @@ export default function ChatApp({ user }) {
               const meta = COMPANION_META[role];
               const isActive = activeCompanion === role;
               return (
-                <button key={role} onClick={() => { setActiveCompanion(role); setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); }}
+                <button key={role} onClick={() => { setActiveCompanion(role); setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); openMobileChat(); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
@@ -1645,7 +1721,7 @@ export default function ChatApp({ user }) {
               const isActive = activeGroupId === group.id;
               const unread = !isActive && isChatUnread(`group_${group.id}`);
               return (
-                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }}
+                <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
@@ -1677,7 +1753,7 @@ export default function ChatApp({ user }) {
           </div>
 
           {/* Friend list */}
-          <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 8px" }}>
+          <div style={{ padding: "0 8px 8px" }}>
             {myFriends.length === 0 && !searchQuery && (
               <div style={{ textAlign: "center", padding: "20px 12px", color: "#475569", fontSize: 13 }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>👥</div>
@@ -1690,7 +1766,7 @@ export default function ChatApp({ user }) {
               const cid = [uid, friend.uid].sort().join('_');
               const unread = !isActive && isChatUnread(`dm_${cid}`);
               return (
-                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }}
+                <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }}
                   onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, friend }); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
@@ -1709,10 +1785,16 @@ export default function ChatApp({ user }) {
               );
             })}
           </div>
+          </div>
         </div>
 
         {/* ── Main area ── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#0a0f1e", minWidth: 0 }}>
+        <div className="chat-main" style={{ flex: 1, display: "flex", flexDirection: "column", background: "#0a0f1e", minWidth: 0 }}>
+          {isMobile && mobileShowChat && (
+            <div style={{ height: 44, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 12px", background: "#0f172a", flexShrink: 0 }}>
+              <button onClick={() => setMobileShowChat(false)} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 14, fontWeight: 600, padding: "4px 8px" }}>← 返回列表</button>
+            </div>
+          )}
 
           {/* Leaderboard view */}
           {showLeaderboard && !activeFriendId && !activeGroupId && !activeCompanion && (
@@ -2199,7 +2281,7 @@ export default function ChatApp({ user }) {
         </div>
 
         {/* Right calendar panel */}
-        <CalendarMemo uid={uid} />
+        <div className="chat-calendar"><CalendarMemo uid={uid} /></div>
       </div>
     </>
   );
