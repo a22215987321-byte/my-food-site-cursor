@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     const result = await executeFinanceStudioDailyRun({ force, preview });
     res.status(200).json(result);
   } catch (err) {
-    console.error("[finance-mentor-run] failed:", err);
-    res.status(500).json({ error: "failed to run finance mentor job", message: err.message });
+    console.error("[finance-group-run] failed:", err);
+    res.status(500).json({ error: "failed to run finance group job", message: err.message });
   }
 }

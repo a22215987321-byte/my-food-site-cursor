@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { auth, db } from "../lib/firebase";
 import AvatarCreator from "./AvatarCreator";
@@ -6,6 +6,11 @@ import CalendarMemo from "./CalendarMemo";
 import { generateCompanionReply, COMPANION_META } from "../lib/aiCompanion";
 import { publishDesignFeedFromClient } from "../lib/designFeedClient";
 import { getTaipeiDateKey } from "../lib/financeDailyBrief";
+import {
+  ensureJoinedFinanceStudioGroup,
+  buildFinanceStudioGroupPlaceholder,
+  FINANCE_STUDIO_GROUP_ID,
+} from "../lib/financeGroupClient";
 import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, orderBy, limitToLast, serverTimestamp,
@@ -1014,14 +1019,32 @@ export default function ChatApp({ user }) {
     });
   }, [uid]);
 
+  useEffect(() => {
+    if (!uid) return;
+    ensureJoinedFinanceStudioGroup(uid).catch((err) => {
+      console.error("[finance-group] join failed:", err.message);
+    });
+  }, [uid]);
+
+  const displayGroups = useMemo(() => {
+    const rest = myGroups.filter((g) => g.id !== FINANCE_STUDIO_GROUP_ID);
+    const studio = myGroups.find((g) => g.id === FINANCE_STUDIO_GROUP_ID) || buildFinanceStudioGroupPlaceholder();
+    return [studio, ...rest];
+  }, [myGroups]);
+
   // Group messages listener
   useEffect(() => {
     if (!activeGroupId) { setGroupMessages([]); return; }
-    const q = query(collection(db, 'groups', activeGroupId, 'messages'), orderBy('createdAt'), limitToLast(50));
+    const financeGroupReady = myGroups.some((g) => g.id === FINANCE_STUDIO_GROUP_ID);
+    if (activeGroupId === FINANCE_STUDIO_GROUP_ID && !financeGroupReady) {
+      setGroupMessages([]);
+      return;
+    }
+    const q = query(collection(db, 'groups', activeGroupId, 'messages'), orderBy('createdAt'), limitToLast(80));
     return onSnapshot(q, snap => {
       setGroupMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
-  }, [activeGroupId]);
+  }, [activeGroupId, myGroups]);
 
   // ── 未讀訊息追蹤：分別訂閱每個好友 / 群組聊天室的最新一則訊息，跟自己讀到的時間比對 ──
   const [lastMsgByChat, setLastMsgByChat] = useState({});
@@ -1043,7 +1066,7 @@ export default function ChatApp({ user }) {
     return () => unsubs.forEach(u => u());
   }, [friendIdsKey, uid]);
 
-  const groupIdsKey = myGroups.map(g => g.id).join(',');
+  const groupIdsKey = displayGroups.map(g => g.id).join(',');
   useEffect(() => {
     const groupIds = groupIdsKey ? groupIdsKey.split(',') : [];
     if (!groupIds.length) return;
@@ -1475,7 +1498,10 @@ export default function ChatApp({ user }) {
     .map(fid => friendProfiles[fid])
     .filter(f => f && (!searchQuery || f.nickname.toLowerCase().includes(searchQuery.toLowerCase())));
   const pendingInCount = (myProfile.pendingIn || []).length;
-  const activeGroup = activeGroupId ? myGroups.find(g => g.id === activeGroupId) : null;
+  const activeGroup = activeGroupId
+    ? (myGroups.find((g) => g.id === activeGroupId) ||
+        (activeGroupId === FINANCE_STUDIO_GROUP_ID ? buildFinanceStudioGroupPlaceholder() : null))
+    : null;
 
   // 未讀狀態判斷：最新一則訊息不是自己發的，且比自己記錄的已讀時間還新
   const isChatUnread = (key, lastAtOverride) => {
@@ -1747,26 +1773,28 @@ export default function ChatApp({ user }) {
 
           {/* Groups section */}
           <div style={{ padding: "0 12px 4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase" }}>群組 {myGroups.length}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase" }}>群組 {displayGroups.length}</span>
             <button onClick={() => setShowCreateGroup(true)} title="創建群組" style={{ background: "#334155", border: "none", borderRadius: 8, padding: "3px 8px", color: "#94a3b8", cursor: "pointer", fontSize: 14 }}>+</button>
           </div>
           <div style={{ padding: "0 8px 6px" }}>
-            {myGroups.map(group => {
+            {displayGroups.map(group => {
               const isActive = activeGroupId === group.id;
-              const unread = !isActive && isChatUnread(`group_${group.id}`);
+              const unread = !isActive && !group.pendingSetup && isChatUnread(`group_${group.id}`);
               return (
                 <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
                   <div style={{ position: "relative", flexShrink: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: group.isAiFinanceGroup ? "linear-gradient(135deg,#0ea5e9,#6366f1)" : "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
                       {group.avatar || "👥"}
                     </div>
                     {unread && <span style={{ position: "absolute", top: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: "#ef4444", border: "2px solid #0f172a" }} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: unread ? 800 : 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: unread ? "#fff" : "#e2e8f0" }}>{group.name}</div>
-                    <div style={{ fontSize: 11, color: unread ? "#c4b5fd" : "#64748b" }}>{unread ? "有新訊息" : `${(group.members || []).length} 人`}</div>
+                    <div style={{ fontSize: 11, color: unread ? "#c4b5fd" : "#64748b" }}>
+                      {group.isAiFinanceGroup ? "公開 · AI財經導師 + AI爸爸" : unread ? "有新訊息" : `${(group.members || []).length} 人`}
+                    </div>
                   </div>
                 </button>
               );
@@ -2219,14 +2247,29 @@ export default function ChatApp({ user }) {
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "#e2e8f0" }}>{activeGroup.name}</div>
-                  <div style={{ fontSize: 11, color: "#64748b" }}>{(activeGroup.members || []).length} 位成員</div>
+                  <div style={{ fontSize: 11, color: activeGroup.isAiFinanceGroup ? "#0ea5e9" : "#64748b" }}>
+                    {activeGroup.isAiFinanceGroup
+                      ? "公開群組 · AI財經導師 + AI爸爸 每日總結"
+                      : `${(activeGroup.members || []).length} 位成員`}
+                  </div>
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 2 }}>
+                {activeGroup.isAiFinanceGroup && (
+                  <div style={{ textAlign: "center", marginBottom: 12, padding: "10px 14px", borderRadius: 12, background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.25)" }}>
+                    <div style={{ fontSize: 12, color: "#7dd3fc", lineHeight: 1.6 }}>
+                      📊 AI財經導師每天訓練 AI 爸爸，並在這裡發佈訓練報告與今日財經總結（僅供陪伴聊天參考，非投資建議）。
+                    </div>
+                  </div>
+                )}
                 {groupMessages.length === 0 && (
                   <div style={{ textAlign: "center", padding: "40px 0", color: "#475569" }}>
-                    <div style={{ fontSize: 40, marginBottom: 8 }}>👥</div>
-                    <div>群組剛建立，快來說聲你好！</div>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>{activeGroup.avatar || "👥"}</div>
+                    <div>
+                      {activeGroup.pendingSetup
+                        ? "AI財經工作室正在準備中，首次每日訓練發佈後就會看到訊息。"
+                        : "群組剛建立，快來說聲你好！"}
+                    </div>
                   </div>
                 )}
                 {groupMessages.map((msg, i) => {
