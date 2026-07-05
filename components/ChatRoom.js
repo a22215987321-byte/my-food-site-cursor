@@ -1196,13 +1196,13 @@ export default function ChatApp({ user }) {
       let reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
       let feedPosted = data.designFeed?.posted;
 
-      if (data.designFeed?.clientPublish && data.designFeed?.wroteVia === "client_pending") {
+      if (data.designFeed?.clientPublish) {
         try {
-          await publishDesignFeedFromClient(data.designFeed.clientPublish);
+          await publishDesignFeedFromClient(data.designFeed.clientPublish, { publisherProfile: myProfile });
           feedPosted = true;
         } catch (clientErr) {
           console.error("[design-feed-client] publish failed:", clientErr);
-          reply += "\n\n⚠️ 作品發佈到動態消息失敗，可能是 Firebase 權限設定問題。";
+          reply += `\n\n⚠️ 作品發佈到動態消息失敗：${clientErr.message || "Firebase 權限問題"}`;
         }
       }
 

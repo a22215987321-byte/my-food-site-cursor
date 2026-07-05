@@ -407,9 +407,14 @@ export default function FeedApp({ user }) {
 
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, snap => {
-      setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    return onSnapshot(
+      q,
+      snap => setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      err => {
+        console.error("[feed] posts listener failed:", err);
+        setPosts([]);
+      }
+    );
   }, []);
 
   if (!myProfile) {
