@@ -45,6 +45,7 @@ const ART_DESIGN_QUICK_ACTIONS = {
   ],
   artstudent: [
     { label: "📐 交設計稿", text: "交作品" },
+    { label: "🔁 重新交稿", text: "再交一份" },
     { label: "❓ 今天學什麼", text: "今天應該學哪個 EVONVCHAT 頁面？" },
     { label: "📰 看動態", href: "/feed" },
   ],
