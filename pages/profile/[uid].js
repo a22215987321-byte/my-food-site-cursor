@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { auth, db } from "../../lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, addDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 async function uploadToR2(file) {
   const base64 = await new Promise((resolve, reject) => {
@@ -191,6 +191,16 @@ export default function ProfilePublicPage() {
     load();
     return () => { cancelled = true; };
   }, [uid]);
+
+  const deletePost = async (postId) => {
+    if (!confirm("確定要刪除這則貼文嗎？此操作無法復原。")) return;
+    try {
+      await deleteDoc(doc(db, "posts", postId));
+      setPosts(prev => prev.filter(p => p.id !== postId));
+    } catch {
+      alert("刪除失敗，請重試");
+    }
+  };
 
   const reloadPosts = async () => {
     if (!uid) return;
@@ -384,6 +394,14 @@ export default function ProfilePublicPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
                           <span style={{ fontWeight: 700, fontSize: 14, color: "#f1f5f9" }}>{profile.nickname}</span>
                           <span style={{ fontSize: 13, color: "#64748b" }}>· {formatDate(post.createdAt)}</span>
+                          {isOwner && (
+                            <button onClick={() => deletePost(post.id)} title="刪除貼文"
+                              style={{ marginLeft: "auto", background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 13, padding: 4 }}
+                              onMouseEnter={e => e.currentTarget.style.color = "#ef4444"}
+                              onMouseLeave={e => e.currentTarget.style.color = "#64748b"}>
+                              🗑️
+                            </button>
+                          )}
                         </div>
                         {post.text && (
                           <div style={{ fontSize: 15, color: "#e2e8f0", lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word", marginBottom: (post.imageUrl || post.videoUrl) ? 10 : 0 }}>

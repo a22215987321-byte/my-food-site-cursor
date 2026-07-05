@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { auth, db } from "../lib/firebase";
 import {
   collection, addDoc, onSnapshot, query, orderBy,
-  doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp,
+  doc, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp,
   getDoc,
 } from "firebase/firestore";
 import Link from "next/link";
@@ -115,7 +115,10 @@ function CommentSection({ postId, myProfile }) {
 
 function PostCard({ post, myUid, myProfile }) {
   const [showComments, setShowComments] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const liked = (post.likes || []).includes(myUid);
+  const isOwner = post.userId === myUid;
 
   const toggleLike = async () => {
     const ref = doc(db, "posts", post.id);
@@ -126,6 +129,19 @@ function PostCard({ post, myUid, myProfile }) {
     }
   };
 
+  const deletePost = async () => {
+    if (!confirm("確定要刪除這則貼文嗎？此操作無法復原。")) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "posts", post.id));
+    } catch {
+      alert("刪除失敗，請重試");
+      setDeleting(false);
+    }
+  };
+
+  if (deleting) return null;
+
   return (
     <div style={{ background: "#1e293b", borderRadius: 16, border: "1px solid #334155", marginBottom: 16, overflow: "hidden" }}>
       {/* Header */}
@@ -135,6 +151,23 @@ function PostCard({ post, myUid, myProfile }) {
           <div style={{ fontWeight: 700, fontSize: 14, color: "#e2e8f0" }}>{post.userNickname}</div>
           <div style={{ fontSize: 11, color: "#64748b" }}>{formatDate(post.createdAt)}</div>
         </div>
+        {isOwner && (
+          <div style={{ position: "relative" }}>
+            <button onClick={() => setMenuOpen(v => !v)}
+              style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18, padding: 4 }}>⋯</button>
+            {menuOpen && (
+              <>
+                <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 10 }} />
+                <div style={{ position: "absolute", top: "100%", right: 0, background: "#0f172a", border: "1px solid #334155", borderRadius: 10, padding: 4, zIndex: 20, whiteSpace: "nowrap" }}>
+                  <button onClick={() => { setMenuOpen(false); deletePost(); }}
+                    style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 13, padding: "8px 12px", borderRadius: 6, width: "100%" }}>
+                    🗑️ 刪除貼文
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Text */}

@@ -77,10 +77,21 @@ function AvatarImg({ avatarImage, avatar, color, size = 36 }) {
 // ── MessageBubble ─────────────────────────────────────────────────────────────
 
 function MessageBubble({ msg, isMine, showSender, myUid, collectionPath }) {
-  const [reactions, setReactions] = useState({});
   const [showPicker, setShowPicker] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const addReaction = (e) => { setReactions(r => ({ ...r, [e]: (r[e]||0)+1 })); setShowPicker(false); };
+  const reactions = msg.reactions || {};
+  const toggleReaction = async (emoji) => {
+    setShowPicker(false);
+    if (!collectionPath) return;
+    const already = (reactions[emoji] || []).includes(myUid);
+    try {
+      await updateDoc(doc(db, ...collectionPath), {
+        [`reactions.${emoji}`]: already ? arrayRemove(myUid) : arrayUnion(myUid),
+      });
+    } catch (e) {
+      // 反應同步失敗時安靜地忽略，不打斷聊天體驗
+    }
+  };
 
   const recallMsg = async () => {
     if (!collectionPath) return;
@@ -119,7 +130,7 @@ function MessageBubble({ msg, isMine, showSender, myUid, collectionPath }) {
           收回
         </button>
       )}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, maxWidth: "72%", marginTop: isMine && hovered ? 22 : 0 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, maxWidth: msg.dailyBrief ? "88%" : "72%", marginTop: isMine && hovered ? 22 : 0 }}>
         {!isMine && showSender && (
           <div style={{ flexShrink: 0 }}>
             <AvatarImg avatarImage={msg.senderAvatarImage} avatar={msg.avatar || msg.sender?.[0]} color="#6366f1" size={30} />
@@ -132,9 +143,9 @@ function MessageBubble({ msg, isMine, showSender, myUid, collectionPath }) {
             padding: hasMedia && !msg.text ? "4px" : "9px 14px",
             borderRadius: isMine ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
             background: isMine ? "linear-gradient(135deg,#8b5cf6,#22d3ee)" : "#1e293b",
-            color: "#fff", fontSize: 14, lineHeight: 1.5, cursor: "default",
+            color: "#fff", fontSize: 14, lineHeight: 1.6, cursor: "default",
             border: isMine ? "none" : "1px solid #334155",
-            overflow: "hidden",
+            overflow: "hidden", whiteSpace: "pre-wrap", wordBreak: "break-word",
           }}>
             {msg.videoUrl && (
               <video src={msg.videoUrl} controls style={{ maxWidth: 260, maxHeight: 200, borderRadius: 10, display: "block" }} />
@@ -144,18 +155,22 @@ function MessageBubble({ msg, isMine, showSender, myUid, collectionPath }) {
             )}
             {msg.text}
           </div>
-          {Object.keys(reactions).length > 0 && (
+          {Object.entries(reactions).some(([, uids]) => uids?.length) && (
             <div style={{ display: "flex", gap: 4, marginTop: 4, flexWrap: "wrap" }}>
-              {Object.entries(reactions).map(([emoji, count]) => (
-                <button key={emoji} onClick={() => addReaction(emoji)} style={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 20, padding: "2px 8px", fontSize: 12, color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
-                  {emoji} <span style={{ color: "#64748b" }}>{count}</span>
-                </button>
-              ))}
+              {Object.entries(reactions).filter(([, uids]) => uids?.length).map(([emoji, uids]) => {
+                const mine = uids.includes(myUid);
+                return (
+                  <button key={emoji} onClick={() => toggleReaction(emoji)} title={mine ? "移除反應" : "加上反應"}
+                    style={{ background: mine ? "rgba(139,92,246,0.28)" : "#1e293b", border: mine ? "1px solid #8b5cf6" : "1px solid #334155", borderRadius: 20, padding: "2px 8px", fontSize: 12, color: "#e2e8f0", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+                    {emoji} <span style={{ color: mine ? "#c4b5fd" : "#64748b" }}>{uids.length}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
           {showPicker && (
             <div style={{ position: "absolute", [isMine ? "right" : "left"]: 0, bottom: "calc(100% + 6px)", background: "#1e293b", borderRadius: 12, border: "1px solid #334155", padding: "6px 8px", display: "flex", gap: 6, zIndex: 10 }}>
-              {EMOJI_QUICK.map(e => <button key={e} onClick={() => addReaction(e)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20 }}>{e}</button>)}
+              {EMOJI_QUICK.map(e => <button key={e} onClick={() => toggleReaction(e)} style={{ background: (reactions[e]||[]).includes(myUid) ? "rgba(139,92,246,0.35)" : "none", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 20 }}>{e}</button>)}
             </div>
           )}
         </div>
@@ -183,6 +198,19 @@ function ProfilePage({ myProfile, friendProfiles, onSave, onClose }) {
   const bgFileRef = useRef(null);
   const avatarFileRef = useRef(null);
   const friendList = (myProfile.friends || []).map(fid => friendProfiles[fid]).filter(Boolean);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  const copyProfileLink = async () => {
+    const url = `${window.location.origin}/profile/${myProfile.uid}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      window.prompt("複製這個連結：", url);
+      return;
+    }
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  };
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -222,10 +250,14 @@ function ProfilePage({ myProfile, friendProfiles, onSave, onClose }) {
                 <span style={{ fontSize: 22, pointerEvents: "none" }}>🎨</span>
               </button>
             </div>
-            <div style={{ paddingBottom: 12 }}>
+            <div style={{ paddingBottom: 12, flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 20, color: "#e2e8f0" }}>{nickname}</div>
               <div style={{ fontSize: 13, color: "#94a3b8" }}>{myProfile.email}</div>
             </div>
+            <button onClick={copyProfileLink} title="複製個人主頁連結"
+              style={{ marginBottom: 12, flexShrink: 0, display: "flex", alignItems: "center", gap: 6, background: linkCopied ? "#22c55e" : "rgba(0,0,0,0.35)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 20, padding: "7px 14px", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600, transition: "background 0.15s" }}>
+              {linkCopied ? "✓ 已複製連結" : "🔗 分享主頁"}
+            </button>
           </div>
           <div style={{ display: "flex", gap: 20, marginTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 14, paddingBottom: 14 }}>
             <div style={{ textAlign: "center" }}>
@@ -789,6 +821,30 @@ export default function ChatApp({ user }) {
     });
   }, [uid]);
 
+  // 好友邀請即時提示：偵測 pendingIn 陣列新增了誰，跳出提示卡而不是要打開面板才看得到
+  const [friendReqToast, setFriendReqToast] = useState(null);
+  const prevPendingInRef = useRef(null);
+  const pendingInKey = (myProfile?.pendingIn || []).join(',');
+  useEffect(() => {
+    if (!myProfile) return;
+    const current = myProfile.pendingIn || [];
+    if (prevPendingInRef.current === null) {
+      prevPendingInRef.current = current;
+      return;
+    }
+    const prev = prevPendingInRef.current;
+    const newOnes = current.filter(id => !prev.includes(id));
+    prevPendingInRef.current = current;
+    if (newOnes.length) {
+      getDoc(doc(db, 'users', newOnes[0])).then(snap => {
+        if (!snap.exists()) return;
+        const u = snap.data();
+        setFriendReqToast({ uid: newOnes[0], nickname: u.nickname, avatar: u.avatar, avatarImage: u.avatarImage, color: u.color });
+        setTimeout(() => setFriendReqToast(cur => (cur?.uid === newOnes[0] ? null : cur)), 6000);
+      }).catch(() => {});
+    }
+  }, [pendingInKey]);
+
   const friendsKey = myProfile?.friends?.join(',') || '';
   useEffect(() => {
     if (!myProfile?.friends?.length) return;
@@ -846,7 +902,8 @@ export default function ChatApp({ user }) {
         fetch("/api/finance-news").catch(() => {});
         const res = await fetch("/api/finance-daily-brief");
         const data = await res.json();
-        if (cancelled || !data.summary || !data.dateKey) return;
+        const parts = Array.isArray(data.parts) && data.parts.length ? data.parts : (data.summary ? [data.summary] : []);
+        if (cancelled || !parts.length || !data.dateKey) return;
 
         const dup = companionMessages.some(
           (m) => m.senderId === "aifather" && m.briefDate === data.dateKey
@@ -855,16 +912,21 @@ export default function ChatApp({ user }) {
 
         fatherBriefPostingRef.current = true;
         const meta = COMPANION_META.father;
-        await addDoc(collection(db, "private_chats", companionChatId, "messages"), {
-          senderId: "aifather",
-          sender: meta.name,
-          avatar: meta.avatar,
-          senderAvatarImage: "",
-          text: data.summary,
-          dailyBrief: true,
-          briefDate: data.dateKey,
-          createdAt: serverTimestamp(),
-        });
+        // 分成好幾則訊息依序送出，模擬真人一句一句聊天，而不是丟一大段文字
+        for (let i = 0; i < parts.length; i++) {
+          if (cancelled) break;
+          await addDoc(collection(db, "private_chats", companionChatId, "messages"), {
+            senderId: "aifather",
+            sender: meta.name,
+            avatar: meta.avatar,
+            senderAvatarImage: "",
+            text: parts[i],
+            dailyBrief: true,
+            briefDate: data.dateKey,
+            createdAt: serverTimestamp(),
+          });
+          if (i < parts.length - 1) await new Promise((r) => setTimeout(r, 700));
+        }
       } catch (err) {
         console.error("[father-daily-brief] auto-post failed:", err);
         fatherBriefPostingRef.current = false;
@@ -892,6 +954,61 @@ export default function ChatApp({ user }) {
       setGroupMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
   }, [activeGroupId]);
+
+  // ── 未讀訊息追蹤：分別訂閱每個好友 / 群組聊天室的最新一則訊息，跟自己讀到的時間比對 ──
+  const [lastMsgByChat, setLastMsgByChat] = useState({});
+  const friendIdsKey = (myProfile?.friends || []).join(',');
+  useEffect(() => {
+    const friendIds = friendIdsKey ? friendIdsKey.split(',') : [];
+    if (!friendIds.length) return;
+    const unsubs = friendIds.map(fid => {
+      const cid = [uid, fid].sort().join('_');
+      const q = query(collection(db, 'private_chats', cid, 'messages'), orderBy('createdAt', 'desc'), limit(1));
+      return onSnapshot(q, snap => {
+        const d = snap.docs[0];
+        setLastMsgByChat(prev => ({
+          ...prev,
+          [`dm_${cid}`]: d ? { at: d.data().createdAt?.toMillis?.() || Date.now(), senderId: d.data().senderId } : null,
+        }));
+      }, () => {});
+    });
+    return () => unsubs.forEach(u => u());
+  }, [friendIdsKey, uid]);
+
+  const groupIdsKey = myGroups.map(g => g.id).join(',');
+  useEffect(() => {
+    const groupIds = groupIdsKey ? groupIdsKey.split(',') : [];
+    if (!groupIds.length) return;
+    const unsubs = groupIds.map(gid => {
+      const q = query(collection(db, 'groups', gid, 'messages'), orderBy('createdAt', 'desc'), limit(1));
+      return onSnapshot(q, snap => {
+        const d = snap.docs[0];
+        setLastMsgByChat(prev => ({
+          ...prev,
+          [`group_${gid}`]: d ? { at: d.data().createdAt?.toMillis?.() || Date.now(), senderId: d.data().senderId } : null,
+        }));
+      }, () => {});
+    });
+    return () => unsubs.forEach(u => u());
+  }, [groupIdsKey]);
+
+  // 進入某個對話時，把「已讀到」的時間戳記回自己的個人資料，讓側欄未讀角標即時消失
+  useEffect(() => {
+    if (!activeFriendId || !uid) return;
+    const cid = [uid, activeFriendId].sort().join('_');
+    updateDoc(doc(db, 'users', uid), { [`lastRead.dm_${cid}`]: Date.now() }).catch(() => {});
+  }, [activeFriendId, uid, privateMessages.length]);
+
+  useEffect(() => {
+    if (!activeGroupId || !uid) return;
+    updateDoc(doc(db, 'users', uid), { [`lastRead.group_${activeGroupId}`]: Date.now() }).catch(() => {});
+  }, [activeGroupId, uid, groupMessages.length]);
+
+  const isHallView = !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion;
+  useEffect(() => {
+    if (!isHallView || !uid || !hallMessages.length) return;
+    updateDoc(doc(db, 'users', uid), { 'lastRead.hall': Date.now() }).catch(() => {});
+  }, [isHallView, uid, hallMessages.length]);
 
   // Donations listener
   useEffect(() => {
@@ -1273,6 +1390,18 @@ export default function ChatApp({ user }) {
   const pendingInCount = (myProfile.pendingIn || []).length;
   const activeGroup = activeGroupId ? myGroups.find(g => g.id === activeGroupId) : null;
 
+  // 未讀狀態判斷：最新一則訊息不是自己發的，且比自己記錄的已讀時間還新
+  const isChatUnread = (key, lastAtOverride) => {
+    const lm = lastAtOverride !== undefined ? lastAtOverride : lastMsgByChat[key];
+    if (!lm || lm.senderId === uid) return false;
+    const readAt = myProfile.lastRead?.[key] || 0;
+    return lm.at > readAt;
+  };
+  const hallLastMsg = hallMessages.length ? hallMessages[hallMessages.length - 1] : null;
+  const hallUnread = !isHallView && hallLastMsg
+    ? isChatUnread('hall', { at: hallLastMsg.createdAt?.toMillis?.() || Date.now(), senderId: hallLastMsg.senderId })
+    : false;
+
   const leaderboard = Object.values(
     donations.reduce((acc, d) => {
       if (!acc[d.userId]) acc[d.userId] = { userId: d.userId, userNickname: d.userNickname, userAvatar: d.userAvatar, userColor: d.userColor, userAvatarImage: d.userAvatarImage, total: 0 };
@@ -1297,6 +1426,21 @@ export default function ChatApp({ user }) {
       {showFriendReqs && <FriendRequests myProfile={myProfile} onAccept={handleAcceptFriend} onDecline={handleDeclineFriend} onClose={() => setShowFriendReqs(false)} />}
       {showCreateGroup && <CreateGroupModal friends={myFriends} onClose={() => setShowCreateGroup(false)} onCreate={handleCreateGroup} />}
       {showDonateModal && <DonateModal myProfile={myProfile} onClose={() => setShowDonateModal(false)} />}
+
+      {/* 好友邀請即時提示卡 */}
+      {friendReqToast && (
+        <div onClick={() => { setShowFriendReqs(true); setFriendReqToast(null); }}
+          style={{ position: "fixed", top: 20, right: 20, zIndex: 500, background: "#1e293b", border: "1px solid #7c3aed", borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.5)", cursor: "pointer", animation: "toastIn 0.25s ease-out" }}>
+          <style>{`@keyframes toastIn { from { opacity:0; transform: translateY(-10px);} to { opacity:1; transform: translateY(0);} }`}</style>
+          <AvatarImg avatarImage={friendReqToast.avatarImage} avatar={friendReqToast.avatar} color={friendReqToast.color} size={40} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "#f1f5f9" }}>📬 新的好友邀請</div>
+            <div style={{ fontSize: 12, color: "#94a3b8" }}>{friendReqToast.nickname} 想加你為好友，點擊查看</div>
+          </div>
+          <button onClick={e => { e.stopPropagation(); setFriendReqToast(null); }}
+            style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 16, marginLeft: 4 }}>✕</button>
+        </div>
+      )}
 
       {/* Right-click context menu */}
       {contextMenu && (
@@ -1419,7 +1563,10 @@ export default function ChatApp({ user }) {
           <div style={{ padding: "4px 10px 0" }}>
             <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "act" : ""}`}
               style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, border: "none", background: !activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s" }}>
-              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#8b5cf6,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
+                {hallUnread && <span style={{ position: "absolute", top: -3, right: -3, width: 10, height: 10, borderRadius: "50%", background: "#ef4444", border: "2px solid #0f172a" }} />}
+              </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13 }}># 公共大廳</div>
                 <div style={{ fontSize: 11, color: "#94a3b8" }}>公開頻道</div>
@@ -1468,7 +1615,7 @@ export default function ChatApp({ user }) {
             <span style={{ fontSize: 11, fontWeight: 600, color: "#475569", letterSpacing: "0.06em", textTransform: "uppercase" }}>AI 陪伴</span>
           </div>
           <div style={{ padding: "0 8px 6px" }}>
-            {["father", "mother"].map(role => {
+            {["father", "mother", "brother"].map(role => {
               const meta = COMPANION_META[role];
               const isActive = activeCompanion === role;
               return (
@@ -1496,16 +1643,20 @@ export default function ChatApp({ user }) {
           <div style={{ padding: "0 8px 6px" }}>
             {myGroups.map(group => {
               const isActive = activeGroupId === group.id;
+              const unread = !isActive && isChatUnread(`group_${group.id}`);
               return (
                 <button key={group.id} onClick={() => { setActiveGroupId(group.id); setActiveFriendId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }}
                   className={`fb ${isActive ? "act" : ""}`}
                   style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10, border: "none", background: isActive ? "#7c3aed" : "transparent", color: "#e2e8f0", cursor: "pointer", textAlign: "left", transition: "background 0.15s", marginBottom: 2 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
-                    {group.avatar || "👥"}
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#475569,#334155)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
+                      {group.avatar || "👥"}
+                    </div>
+                    {unread && <span style={{ position: "absolute", top: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: "#ef4444", border: "2px solid #0f172a" }} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{group.name}</div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>{(group.members || []).length} 人</div>
+                    <div style={{ fontWeight: unread ? 800 : 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: unread ? "#fff" : "#e2e8f0" }}>{group.name}</div>
+                    <div style={{ fontSize: 11, color: unread ? "#c4b5fd" : "#64748b" }}>{unread ? "有新訊息" : `${(group.members || []).length} 人`}</div>
                   </div>
                 </button>
               );
@@ -1536,6 +1687,8 @@ export default function ChatApp({ user }) {
             )}
             {myFriends.map(friend => {
               const isActive = activeFriendId === friend.uid;
+              const cid = [uid, friend.uid].sort().join('_');
+              const unread = !isActive && isChatUnread(`dm_${cid}`);
               return (
                 <button key={friend.uid} onClick={() => { setActiveFriendId(friend.uid); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); }}
                   onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, friend }); }}
@@ -1544,11 +1697,12 @@ export default function ChatApp({ user }) {
                   <div style={{ position: "relative", flexShrink: 0 }}>
                     <AvatarImg avatarImage={friend.avatarImage} avatar={friend.avatar} color={friend.color} size={36} />
                     <span style={{ position: "absolute", bottom: 1, right: 1, width: 10, height: 10, borderRadius: "50%", background: getStatus(friend.status).color, border: "2px solid #0f172a" }} />
+                    {unread && <span style={{ position: "absolute", top: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: "#ef4444", border: "2px solid #0f172a" }} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{friend.nickname}</div>
-                    <div style={{ fontSize: 11, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {friend.statusText || getStatus(friend.status).label}
+                    <div style={{ fontWeight: unread ? 800 : 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: unread ? "#fff" : "#e2e8f0" }}>{friend.nickname}</div>
+                    <div style={{ fontSize: 11, color: unread ? "#c4b5fd" : "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {unread ? "有新訊息" : (friend.statusText || getStatus(friend.status).label)}
                     </div>
                   </div>
                 </button>
@@ -1981,7 +2135,7 @@ export default function ChatApp({ user }) {
             </>
           )}
 
-          {/* AI Companion chat (AI 爸爸 / AI 媽媽) */}
+          {/* AI Companion chat (AI 爸爸 / AI 媽媽 / AI 哥哥) */}
           {activeCompanion && (
             <>
               <div style={{ height: 56, borderBottom: "1px solid #1e293b", display: "flex", alignItems: "center", padding: "0 20px", gap: 12, background: "#0f172a", flexShrink: 0 }}>
