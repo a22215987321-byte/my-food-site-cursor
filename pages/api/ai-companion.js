@@ -15,6 +15,7 @@ import {
   buildDesignTrainingFallbackReply,
   executeDesignFeedRun,
   formatDesignFeedContextForPrompt,
+  serializeDesignFeedResponse,
   shouldTriggerDesignFeed,
 } from "../../lib/designFeedService";
 
@@ -128,6 +129,7 @@ export default async function handler(req, res) {
       designFeedResult = await executeDesignFeedRun({
         force: true,
         forceWrite: designFeedTrigger.forceWrite,
+        fromChat: true,
       });
       extraContext += formatDesignFeedContextForPrompt(designFeedResult);
       if (role === "artstudent") {
@@ -209,14 +211,7 @@ export default async function handler(req, res) {
         financeAware: role === "father" && !!financeNews.length,
         urlAware: role === "brother" && !!urlData,
         designFeedTriggered: !!designFeedResult,
-        designFeed: designFeedResult
-          ? {
-              slotKey: designFeedResult.slotKey,
-              reviewStatus: designFeedResult.reviewStatus,
-              targetName: designFeedResult.run?.target?.name,
-              posted: !designFeedResult.designRun?.skipped,
-            }
-          : null,
+        designFeed: serializeDesignFeedResponse(designFeedResult),
       });
       return;
     } catch (err) {
@@ -235,12 +230,7 @@ export default async function handler(req, res) {
       reply: buildDesignTrainingFallbackReply(designFeedResult, nickname, role),
       engine: "rule",
       designFeedTriggered: true,
-      designFeed: {
-        slotKey: designFeedResult.slotKey,
-        reviewStatus: designFeedResult.reviewStatus,
-        targetName: designFeedResult.run?.target?.name,
-        posted: !designFeedResult.designRun?.skipped,
-      },
+      designFeed: serializeDesignFeedResponse(designFeedResult),
     });
     return;
   }

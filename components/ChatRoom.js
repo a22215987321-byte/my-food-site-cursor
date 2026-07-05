@@ -4,6 +4,7 @@ import { auth, db } from "../lib/firebase";
 import AvatarCreator from "./AvatarCreator";
 import CalendarMemo from "./CalendarMemo";
 import { generateCompanionReply, COMPANION_META } from "../lib/aiCompanion";
+import { publishDesignFeedFromClient } from "../lib/designFeedClient";
 import { getTaipeiDateKey } from "../lib/financeDailyBrief";
 import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
@@ -1193,10 +1194,22 @@ export default function ChatApp({ user }) {
       }, requestTimeout);
       const data = await res.json();
       let reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
-      if (data.designFeedTriggered && !reply.includes("動態消息")) {
-        reply += data.designFeed?.posted
-          ? "\n\n📋 作品已發到動態消息，請到左側「動態消息」查看 AI美術生的設計稿與我的審核。"
-          : "\n\n📋 本時段已有作品，請到「動態消息」查看。";
+      let feedPosted = data.designFeed?.posted;
+
+      if (data.designFeed?.clientPublish && data.designFeed?.wroteVia === "client_pending") {
+        try {
+          await publishDesignFeedFromClient(data.designFeed.clientPublish);
+          feedPosted = true;
+        } catch (clientErr) {
+          console.error("[design-feed-client] publish failed:", clientErr);
+          reply += "\n\n⚠️ 作品發佈到動態消息失敗，可能是 Firebase 權限設定問題。";
+        }
+      }
+
+      if (feedPosted && !reply.includes("動態消息")) {
+        reply += "\n\n📋 作品已發到動態消息，請到左側「動態消息」查看 AI美術生的設計稿與我的審核。";
+      } else if (data.designFeedTriggered && !feedPosted && !reply.includes("動態消息")) {
+        reply += "\n\n📋 本時段已有作品，請到「動態消息」查看。";
       }
       await addDoc(collection(db, 'private_chats', cid, 'messages'), {
         senderId: `ai${role}`, sender: meta.name, avatar: meta.avatar,
