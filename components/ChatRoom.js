@@ -1169,14 +1169,20 @@ export default function ChatApp({ user }) {
     });
     setCompanionTyping(true);
     const meta = COMPANION_META[role];
+    const requestTimeout = role === "artteacher" ? 45000 : 28000;
     try {
       const res = await fetchWithTimeout("/api/ai-companion", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, message: text, history, nickname: myProfile.nickname, userId: uid }),
-      }, 28000);
+      }, requestTimeout);
       const data = await res.json();
-      const reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
+      let reply = data.reply || generateCompanionReply(role, text, myProfile.nickname);
+      if (data.designFeedTriggered && !reply.includes("動態消息")) {
+        reply += data.designFeed?.posted
+          ? "\n\n📋 作品已發到動態消息，請到左側「動態消息」查看 AI美術生的設計稿與我的審核。"
+          : "\n\n📋 本時段已有作品，請到「動態消息」查看。";
+      }
       await addDoc(collection(db, 'private_chats', cid, 'messages'), {
         senderId: `ai${role}`, sender: meta.name, avatar: meta.avatar,
         senderAvatarImage: "", text: reply, createdAt: serverTimestamp(),

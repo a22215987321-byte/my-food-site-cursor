@@ -11,6 +11,13 @@ import {
 import { extractFirstUrl, fetchUrlSummaryData, buildRuleBasedUrlSummary } from "../../lib/urlSummary";
 import { callFinanceAgent } from "../../lib/financeAgentClient";
 import { formatMentorContextForPrompt, buildMentorContextPayload, loadActiveMentorDirective } from "../../lib/financeMentorMemory";
+import {
+  buildDesignTrainingFallbackReply,
+  executeDesignFeedRun,
+  formatDesignFeedContextForPrompt,
+  isDesignForceRepostCommand,
+  isDesignTrainingCommand,
+} from "../../lib/designFeedService";
 
 const GEMINI_MODEL = "gemini-2.5-flash";
 
@@ -42,7 +49,8 @@ const ROLE_EXTRA_RULE = {
     "6. 若對方問頁面設計，請用「觀察 / 改版方向 / 可實作建議」三段簡短回覆。",
   artteacher:
     "5. 回覆要像嚴格但願意教的設計老師；先判斷是否合格，再列出要修改的重點。\n" +
-    "6. 不要只說好看或不好看，必須說明理由，並給出下一次訓練要求。",
+    "6. 不要只說好看或不好看，必須說明理由，並給出下一次訓練要求。\n" +
+    "7. 若下方有「系統狀態：你剛剛已真正安排 AI美術生 去動態消息交作品」，代表訓練已執行，請明確叫使用者去「動態消息」查看，不要只口頭出題。",
 };
 
 async function callGemini(role, message, history, nickname, apiKey, extraContext) {
@@ -113,6 +121,21 @@ export default async function handler(req, res) {
   let financeNews = [];
   let urlData = null;
   let extraContext = "";
+  let designFeedResult = null;
+
+  if (role === "artteacher" && userId && (isDesignTrainingCommand(message) || isDesignForceRepostCommand(message))) {
+    try {
+      designFeedResult = await executeDesignFeedRun({
+        force: true,
+        forceWrite: isDesignForceRepostCommand(message),
+      });
+      extraContext += formatDesignFeedContextForPrompt(designFeedResult);
+    } catch (err) {
+      console.error("[ai-companion] design feed trigger failed:", err.message);
+      extraContext +=
+        "\n\n【系統狀態：安排 AI美術生 交作品失敗】請告知使用者稍後再試，或請站長確認 Firebase Admin 設定。";
+    }
+  }
 
   if (role === "father") {
     let mentorContextPayload = null;
@@ -182,6 +205,15 @@ export default async function handler(req, res) {
         engine: "gemini",
         financeAware: role === "father" && !!financeNews.length,
         urlAware: role === "brother" && !!urlData,
+        designFeedTriggered: !!designFeedResult,
+        designFeed: designFeedResult
+          ? {
+              slotKey: designFeedResult.slotKey,
+              reviewStatus: designFeedResult.reviewStatus,
+              targetName: designFeedResult.run?.target?.name,
+              posted: !designFeedResult.designRun?.skipped,
+            }
+          : null,
       });
       return;
     } catch (err) {
@@ -192,6 +224,21 @@ export default async function handler(req, res) {
   if (role === "brother" && urlData) {
     const reply = buildRuleBasedUrlSummary(urlData);
     res.status(200).json({ reply, engine: "rule", urlAware: true });
+    return;
+  }
+
+  if (role === "artteacher" && designFeedResult) {
+    res.status(200).json({
+      reply: buildDesignTrainingFallbackReply(designFeedResult, nickname),
+      engine: "rule",
+      designFeedTriggered: true,
+      designFeed: {
+        slotKey: designFeedResult.slotKey,
+        reviewStatus: designFeedResult.reviewStatus,
+        targetName: designFeedResult.run?.target?.name,
+        posted: !designFeedResult.designRun?.skipped,
+      },
+    });
     return;
   }
 
@@ -209,5 +256,6 @@ export default async function handler(req, res) {
     reply,
     engine: "rule",
     financeAware: useFinance,
+    designFeedTriggered: !!designFeedResult,
   });
 }
