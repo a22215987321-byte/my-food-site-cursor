@@ -69,12 +69,12 @@ const HERO_STYLES = `
     bottom: 0;
     width: 46%;
     height: 94%;
-    z-index: 1;
+    z-index: 5;
     pointer-events: none;
     animation: dual-float 7s ease-in-out infinite;
   }
   .dual-char-wrap-left { left: 0; }
-  .dual-char-wrap-right { right: 0; animation-delay: -3.5s; }
+  .dual-char-wrap-right { right: 0; z-index: 9; animation-delay: -3.5s; }
 
   .dual-char-panel {
     position: relative;
@@ -83,6 +83,12 @@ const HERO_STYLES = `
     opacity: 0.65;
     transition: opacity 0.55s ease, transform 0.55s ease, filter 0.55s ease;
     will-change: transform, opacity, filter;
+  }
+
+  /* Right character — brighter, shifted toward center */
+  .dual-char-panel-right {
+    opacity: 0.9;
+    transform: translateX(-12%);
   }
 
   .dual-char-img {
@@ -94,6 +100,12 @@ const HERO_STYLES = `
   }
   .dual-char-img.mirror { transform: scaleX(-1); }
 
+  .dual-char-img-right {
+    object-position: 78% center;
+    filter: brightness(1.12) contrast(1.05) saturate(1.05);
+    box-shadow: inset 0 0 80px rgba(70,110,255,0.18);
+  }
+
   .dual-char-glow {
     position: absolute;
     bottom: 8%;
@@ -104,7 +116,10 @@ const HERO_STYLES = `
     transition: opacity 0.55s ease, transform 0.55s ease;
   }
   .dual-char-glow-left { left: -8%; }
-  .dual-char-glow-right { right: -8%; }
+  .dual-char-glow-right {
+    right: -8%;
+    background: radial-gradient(ellipse, rgba(70,110,255,0.35) 0%, rgba(75,123,255,0.12) 45%, transparent 72%) !important;
+  }
 
   .dual-hint {
     position: absolute;
@@ -143,16 +158,17 @@ const HERO_STYLES = `
 
   .dual-hero-stage:has(.dual-zone-right:hover) .dual-char-wrap-right .dual-char-panel {
     opacity: 1;
-    transform: scale(1.06) translateX(-18px);
-    filter: brightness(1.12);
+    transform: scale(1.05) translateX(-12%);
+    filter: none;
   }
   .dual-hero-stage:has(.dual-zone-right:hover) .dual-char-wrap-right .dual-char-glow {
-    opacity: 1;
-    transform: scale(1.1);
+    opacity: 0.75;
+    transform: scale(1.08);
+    background: radial-gradient(ellipse, rgba(70,110,255,0.42) 0%, rgba(100,140,255,0.18) 50%, transparent 72%) !important;
   }
   .dual-hero-stage:has(.dual-zone-right:hover) .dual-char-wrap-left .dual-char-panel {
-    opacity: 0.28;
-    filter: blur(1px) brightness(0.7);
+    opacity: 0.45;
+    filter: none;
     transform: scale(0.98);
   }
   .dual-hero-stage:has(.dual-zone-right:hover) .dual-hint-right {
@@ -160,32 +176,48 @@ const HERO_STYLES = `
     transform: translateY(0);
   }
 
-  .dual-hero-overlay {
+  .dual-hero-overlay-left,
+  .dual-hero-overlay-right {
+    position: absolute;
+    top: 0;
+    width: 58%;
+    height: 100%;
+    z-index: 8;
+    pointer-events: none;
+  }
+  .dual-hero-overlay-left {
+    left: 0;
+    background: linear-gradient(to left,
+      rgba(8,10,18,0.95) 0%,
+      rgba(8,10,18,0.45) 42%,
+      rgba(8,10,18,0.08) 75%,
+      rgba(8,10,18,0) 100%
+    );
+  }
+  .dual-hero-overlay-right {
+    right: 0;
+    background: linear-gradient(to right,
+      rgba(8,10,18,0.95) 0%,
+      rgba(8,10,18,0.45) 42%,
+      rgba(8,10,18,0.08) 75%,
+      rgba(8,10,18,0) 100%
+    );
+  }
+  .dual-hero-overlay-bottom {
     position: absolute;
     inset: 0;
-    z-index: 2;
+    z-index: 8;
     pointer-events: none;
-    opacity: 0.15;
-    background:
-      linear-gradient(90deg,
-        #0B0D12 0%,
-        rgba(11,13,18,0.55) 18%,
-        rgba(0,0,0,0.82) 42%,
-        rgba(0,0,0,0.82) 58%,
-        rgba(11,13,18,0.55) 82%,
-        #0B0D12 100%
-      ),
-      linear-gradient(180deg,
-        rgba(11,13,18,0.2) 0%,
-        transparent 35%,
-        transparent 65%,
-        #0B0D12 100%
-      );
+    background: linear-gradient(180deg,
+      transparent 0%,
+      transparent 65%,
+      rgba(11,13,18,0.55) 100%
+    );
   }
 
   .dual-hero-cta {
     position: relative;
-    z-index: 10;
+    z-index: 20;
     display: flex;
     min-height: 680px;
     max-width: 640px;
@@ -312,15 +344,17 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
         </div>
 
         <div className="dual-char-wrap dual-char-wrap-right">
-          <div className="dual-char-panel">
-            <div className="dual-char-glow dual-char-glow-right" style={{ background: GLOW_BG }} />
-            <img src={HERO_BOY} alt="月光教室角色" className="dual-char-img" />
+          <div className="dual-char-panel dual-char-panel-right">
+            <div className="dual-char-glow dual-char-glow-right" />
+            <img src={HERO_BOY} alt="月光教室角色" className="dual-char-img dual-char-img-right" />
             <p className="dual-hint dual-hint-right">月光教室 · 進入他的房間</p>
           </div>
         </div>
       </div>
 
-      <div className="dual-hero-overlay" aria-hidden="true" />
+      <div className="dual-hero-overlay-left" aria-hidden="true" />
+      <div className="dual-hero-overlay-right" aria-hidden="true" />
+      <div className="dual-hero-overlay-bottom" aria-hidden="true" />
 
       <div className="dual-hero-cta">
         <p className="dual-hero-badge">
