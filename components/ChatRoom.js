@@ -6,6 +6,12 @@ import CalendarMemo from "./CalendarMemo";
 import { generateCompanionReply, COMPANION_META } from "../lib/aiCompanion";
 import { publishDesignFeedFromClient } from "../lib/designFeedClient";
 import { getTaipeiDateKey } from "../lib/financeDailyBrief";
+import CommunityIntroModal from "./CommunityIntroModal";
+import {
+  shouldShowIntroModal,
+  shouldShowHallBanner,
+  dismissHallBanner,
+} from "../lib/communityIntro";
 import {
   ensureJoinedFinanceStudioGroup,
   buildFinanceStudioGroupPlaceholder,
@@ -681,6 +687,8 @@ export default function ChatApp({ user }) {
   const [showLeaderboard,  setShowLeaderboard]  = useState(false);
   const [donations,        setDonations]        = useState([]);
   const [showDonateModal,  setShowDonateModal]  = useState(false);
+  const [showIntroModal,   setShowIntroModal]   = useState(false);
+  const [showHallBanner,   setShowHallBanner]   = useState(false);
 
   // AI Companion states
   const [activeCompanion,   setActiveCompanion]   = useState(null);
@@ -878,6 +886,11 @@ export default function ChatApp({ user }) {
     document.addEventListener("click", close);
     return () => document.removeEventListener("click", close);
   }, [contextMenu]);
+
+  useEffect(() => {
+    if (shouldShowIntroModal()) setShowIntroModal(true);
+    if (shouldShowHallBanner()) setShowHallBanner(true);
+  }, []);
 
   useEffect(() => {
     return onSnapshot(doc(db, 'users', uid), snap => {
@@ -1562,6 +1575,7 @@ export default function ChatApp({ user }) {
       {showFriendReqs && <FriendRequests myProfile={myProfile} onAccept={handleAcceptFriend} onDecline={handleDeclineFriend} onClose={() => setShowFriendReqs(false)} />}
       {showCreateGroup && <CreateGroupModal friends={myFriends} onClose={() => setShowCreateGroup(false)} onCreate={handleCreateGroup} />}
       {showDonateModal && <DonateModal myProfile={myProfile} onClose={() => setShowDonateModal(false)} />}
+      {showIntroModal && <CommunityIntroModal onClose={() => setShowIntroModal(false)} />}
 
       {/* 好友邀請即時提示卡 */}
       {friendReqToast && (
@@ -2164,6 +2178,46 @@ export default function ChatApp({ user }) {
                 </div>
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 2 }}>
+                {showHallBanner && (
+                  <div style={{
+                    marginBottom: 16,
+                    padding: "14px 16px",
+                    borderRadius: 14,
+                    background: "linear-gradient(135deg, rgba(124,58,237,0.2), rgba(34,211,238,0.1))",
+                    border: "1px solid rgba(139,92,246,0.5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}>
+                    <div style={{ flex: 1, minWidth: 200 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: "#e2e8f0", marginBottom: 4 }}>✨ 搶先體驗 Pro · 新功能通知</div>
+                      <div style={{ fontSize: 12, color: "#94a3b8" }}>查看社群功能介紹，或登記等待名單取得優先通知</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <Link href="/community#waitlist" style={{
+                        background: "linear-gradient(135deg,#8b5cf6,#22d3ee)",
+                        color: "#fff",
+                        textDecoration: "none",
+                        padding: "8px 16px",
+                        borderRadius: 10,
+                        fontSize: 13,
+                        fontWeight: 700,
+                        whiteSpace: "nowrap",
+                      }}>
+                        登記等待名單
+                      </Link>
+                      <button
+                        onClick={() => { dismissHallBanner(); setShowHallBanner(false); }}
+                        style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18, padding: 4 }}
+                        title="關閉"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div style={{ textAlign: "center", color: "#475569", fontSize: 12, padding: "8px 0 16px" }}>
                   今天 · {new Date().toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
                 </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import ChatRoom from '../components/ChatRoom';
+import { shouldSkipSplash } from '../lib/communityIntro';
 import { auth, db, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -147,6 +149,7 @@ function getErrorMessage(code) {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [step, setStep] = useState('loading'); // loading | login | setup | chat
 
@@ -171,7 +174,7 @@ export default function Home() {
       setUser(u);
       const snap = await getDoc(doc(db, 'users', u.uid));
       if (snap.exists()) {
-        setStep('splash');
+        setStep(shouldSkipSplash() ? 'chat' : 'splash');
       } else {
         setSetupNickname(u.displayName || '');
         setStep('setup');
@@ -204,7 +207,7 @@ export default function Home() {
         avatarImage: '/avatar1.png',
         createdAt: serverTimestamp(),
       });
-      setStep('chat');
+      setStep('splash');
     } catch (e) { setAuthError(getErrorMessage(e.code)); }
     finally { setBusy(false); }
   };
@@ -229,7 +232,7 @@ export default function Home() {
         avatarImage: '/avatar1.png',
         createdAt: serverTimestamp(),
       });
-      setStep('chat');
+      setStep('splash');
     } catch (e) { console.error(e); }
     finally { setBusy(false); }
   };
@@ -261,7 +264,7 @@ export default function Home() {
 
   // ── Splash ──
   if (step === 'splash') {
-    return <SplashScreen onEnter={() => setStep('chat')} />;
+    return <SplashScreen onEnter={() => router.push('/community')} />;
   }
 
   // ── Chat ──
