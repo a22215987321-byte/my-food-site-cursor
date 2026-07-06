@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import ChatRoom from '../components/ChatRoom';
 import { auth, db, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -325,7 +326,12 @@ export default function Home() {
             background: 'linear-gradient(135deg,#c4b5fd,#67e8f9)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
           }}>EvonVChat</h1>
-          <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>聊天社交平台・與朋友保持聯繫</p>
+          <p style={{ color: '#94a3b8', fontSize: 15, marginTop: 8, lineHeight: 1.5 }}>即時聊天平台 — 大廳、好友、群組，免費開始</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {['公共大廳即時聊天，認識新朋友', '好友私訊、群組、動態消息', '站上還有 AI 夥伴與每日內容可互動'].map(line => (
+              <li key={line} style={{ color: '#64748b', fontSize: 13 }}>· {line}</li>
+            ))}
+          </ul>
         </div>
         <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, border: '1px solid #334155' }}>
           {/* Tab switch */}
@@ -409,6 +415,12 @@ export default function Home() {
             </svg>
             使用 Google 帳號登入
           </button>
+
+          <div style={{ marginTop: 20, textAlign: 'center' }}>
+            <Link href="/community" style={{ color: '#8b5cf6', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>
+              了解 EvonVChat 社群功能 →
+            </Link>
+          </div>
         </div>
       </div>
     </div>

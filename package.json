@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:finance": "node --test tests/financeSessionSchedule.test.mjs tests/financeRunLogger.test.mjs",
+    "test:waitlist": "node --test tests/waitlist.test.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

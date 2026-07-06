@@ -1696,6 +1696,19 @@ export default function ChatApp({ user }) {
             </Link>
           </div>
 
+          {/* Community / waitlist */}
+          <div style={{ padding: "4px 10px 0" }}>
+            <Link href="/community" style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 10px", borderRadius: 10, background: "transparent", color: "#e2e8f0", textDecoration: "none", transition: "background 0.15s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#1e3a5f"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#6366f1,#22d3ee)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🌐</div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>社群介紹</div>
+                <div style={{ fontSize: 11, color: "#94a3b8" }}>功能一覽 · 搶先體驗</div>
+              </div>
+            </Link>
+          </div>
+
           {/* Hall button */}
           <div style={{ padding: "4px 10px 0" }}>
             <button onClick={() => { setActiveFriendId(null); setActiveGroupId(null); setShowLeaderboard(false); setShowCinema(false); setShowAiNews(false); setActiveCompanion(null); openMobileChat(); }} className={`fb ${!activeFriendId && !activeGroupId && !showLeaderboard && !showCinema && !showAiNews && !activeCompanion ? "act" : ""}`}
