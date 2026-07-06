@@ -1,3 +1,6 @@
+const HERO_GIRL = "/assets/community/hero-girl.png";
+const HERO_BOY = "/assets/community/hero-boy.png";
+
 const HERO_STYLES = `
   @keyframes dual-float {
     0%, 100% { transform: translateY(0); }
@@ -10,6 +13,8 @@ const HERO_STYLES = `
   }
 
   .dual-char-wrap {
+    position: absolute;
+    z-index: 1;
     animation: dual-float 7s ease-in-out infinite;
   }
   .dual-char-wrap-right {
@@ -17,10 +22,17 @@ const HERO_STYLES = `
   }
 
   .dual-char-panel {
-    opacity: 0.55;
-    filter: brightness(0.88);
+    opacity: 0.65;
     transition: opacity 0.55s ease, transform 0.55s ease, filter 0.55s ease;
     will-change: transform, opacity, filter;
+  }
+
+  .dual-char-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
   }
 
   .dual-char-glow {
@@ -96,21 +108,20 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
         className="pointer-events-none absolute inset-0 z-[1] md:hidden"
         aria-hidden="true"
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B0D12]/30 via-[#0B0D12]/88 to-[#0B0D12]" />
         <img
-          src="/assets/community/hero-female.png"
+          src={HERO_GIRL}
           alt=""
-          className="absolute bottom-0 left-1/2 h-[72%] w-[120%] max-w-none -translate-x-1/2 object-cover object-top opacity-[0.22] -scale-x-100"
+          className="dual-char-img absolute bottom-0 left-1/2 h-[72%] w-[120%] max-w-none -translate-x-1/2 opacity-[0.65] -scale-x-100"
         />
       </div>
 
       {/* Desktop interactive stage */}
       <div className="dual-hero-stage absolute inset-0 z-[1] hidden md:block">
-        <div className="dual-zone dual-zone-left absolute left-0 top-0 z-20 h-full w-1/2 cursor-pointer" aria-hidden="true" />
-        <div className="dual-zone dual-zone-right absolute right-0 top-0 z-20 h-full w-1/2 cursor-pointer" aria-hidden="true" />
+        <div className="dual-zone dual-zone-left absolute left-0 top-0 z-[3] h-full w-1/2 cursor-pointer" aria-hidden="true" />
+        <div className="dual-zone dual-zone-right absolute right-0 top-0 z-[3] h-full w-1/2 cursor-pointer" aria-hidden="true" />
 
-        {/* Left — female, mirrored toward center */}
-        <div className="dual-char-wrap dual-char-wrap-left pointer-events-none absolute bottom-0 left-0 z-[5] h-[94%] w-[46%]">
+        {/* Left — girl, mirrored toward center */}
+        <div className="dual-char-wrap dual-char-wrap-left pointer-events-none bottom-0 left-0 h-[94%] w-[46%]">
           <div className="dual-char-panel relative h-full w-full">
             <div
               className="dual-char-glow absolute -left-[8%] bottom-[8%] h-[55%] w-[70%] rounded-full"
@@ -119,9 +130,9 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
               }}
             />
             <img
-              src="/assets/community/hero-female.png"
+              src={HERO_GIRL}
               alt="夜校走廊角色"
-              className="h-full w-full object-cover object-[center_top] -scale-x-100"
+              className="dual-char-img -scale-x-100"
             />
             <p className="dual-hint dual-hint-left absolute bottom-[14%] left-[12%] z-10 max-w-[200px] text-sm font-medium tracking-wide text-[#C4B5FD]">
               夜校走廊 · 與她開始聊天
@@ -129,8 +140,8 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
           </div>
         </div>
 
-        {/* Right — male */}
-        <div className="dual-char-wrap dual-char-wrap-right pointer-events-none absolute bottom-0 right-0 z-[5] h-[94%] w-[46%]">
+        {/* Right — boy */}
+        <div className="dual-char-wrap dual-char-wrap-right pointer-events-none bottom-0 right-0 h-[94%] w-[46%]">
           <div className="dual-char-panel relative h-full w-full">
             <div
               className="dual-char-glow absolute -right-[8%] bottom-[8%] h-[55%] w-[70%] rounded-full"
@@ -139,9 +150,9 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
               }}
             />
             <img
-              src="/assets/community/hero-male.png"
+              src={HERO_BOY}
               alt="月光教室角色"
-              className="h-full w-full object-cover object-[center_top]"
+              className="dual-char-img"
             />
             <p className="dual-hint dual-hint-right absolute bottom-[14%] right-[12%] z-10 max-w-[200px] text-right text-sm font-medium tracking-wide text-[#C4B5FD]">
               月光教室 · 進入他的房間
@@ -150,10 +161,11 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
         </div>
       </div>
 
-      {/* Center readability masks */}
+      {/* Center readability overlay — z-2, low opacity so characters stay visible */}
       <div
-        className="pointer-events-none absolute inset-0 z-[8]"
+        className="pointer-events-none absolute inset-0 z-[2]"
         style={{
+          opacity: 0.15,
           background: `
             linear-gradient(90deg,
               #0B0D12 0%,
@@ -175,7 +187,7 @@ export default function CommunityDualHero({ onEnterChat, onExploreRooms }) {
       />
 
       {/* Center CTA */}
-      <div className="relative z-[30] mx-auto flex min-h-[680px] max-w-[640px] flex-col items-center justify-center px-6 py-16 text-center lg:min-h-[760px]">
+      <div className="relative z-[10] mx-auto flex min-h-[680px] max-w-[640px] flex-col items-center justify-center px-6 py-16 text-center lg:min-h-[760px]">
         <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-semibold tracking-wider text-[#A5B4FC] backdrop-blur-sm">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
           EVONVCHAT · 真人社群 + AI 夥伴
