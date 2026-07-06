@@ -1,5 +1,6 @@
 import { useRouter } from "next/router";
 import WaitlistForm from "../components/WaitlistForm";
+import CommunityDualHero from "../components/CommunityDualHero";
 import { COMPANION_META } from "../lib/aiCompanion";
 import { markEnterChat } from "../lib/communityIntro";
 
@@ -60,57 +61,6 @@ const CONTENT_CARDS = [
     tint: "rgba(124,92,255,0.08)",
   },
 ];
-
-const MOCK_GROUPS = ["# 公共大廳", "週末電影夜", "AI財經工作室"];
-const MOCK_MSGS = [
-  { who: "Mia", text: "有人今晚看直播嗎？", mine: false },
-  { who: "你", text: "有啊，幾點開始？", mine: true },
-  { who: "Ken", text: "九點，電影院見 🎬", mine: false },
-];
-
-function ChatMockup() {
-  return (
-    <div className="cm-mockup">
-      <div className="cm-mockup-glow" />
-      <div className="cm-mockup-inner">
-        <div className="cm-mockup-top">
-          <div>
-            <div className="cm-mockup-title"># 公共大廳</div>
-            <div className="cm-mockup-online">
-              <span className="cm-dot" /> 128 人在線
-            </div>
-          </div>
-          <div className="cm-mockup-pill">Live</div>
-        </div>
-
-        <div className="cm-mockup-body">
-          <div className="cm-sidebar">
-            <div className="cm-sidebar-label">群組</div>
-            {MOCK_GROUPS.map((g, i) => (
-              <div key={g} className={`cm-group-item${i === 0 ? " active" : ""}`}>
-                <span>{g}</span>
-                {i === 0 && <span className="cm-group-badge">128</span>}
-              </div>
-            ))}
-          </div>
-
-          <div className="cm-chat">
-            {MOCK_MSGS.map((m) => (
-              <div key={m.text} className={`cm-bubble-wrap${m.mine ? " mine" : ""}`}>
-                {!m.mine && <span className="cm-bubble-name">{m.who}</span>}
-                <div className={`cm-bubble${m.mine ? " mine" : ""}`}>{m.text}</div>
-              </div>
-            ))}
-            <div className="cm-typing">
-              <span className="cm-dot" style={{ width: 6, height: 6 }} />
-              AI 媽媽 正在輸入…
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -181,129 +131,6 @@ export default function CommunityPage() {
           font-size: 13px;
           font-weight: 700;
           cursor: pointer;
-        }
-
-        /* Hero */
-        .cm-hero {
-          display: flex;
-          flex-direction: column;
-          gap: 48px;
-          padding: 48px 0 72px;
-        }
-        .cm-hero-copy { flex: 1; }
-        .cm-hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 14px;
-          border-radius: 20px;
-          background: ${GLASS};
-          border: 1px solid ${BORDER};
-          font-size: 12px;
-          color: #A5B4FC;
-          margin-bottom: 28px;
-          backdrop-filter: blur(8px);
-        }
-        .cm-hero h1 {
-          font-size: clamp(32px, 7vw, 52px);
-          font-weight: 800;
-          line-height: 1.12;
-          margin: 0 0 20px;
-          letter-spacing: -0.02em;
-          color: #F8FAFF;
-        }
-        .cm-hero h1 span {
-          background: ${GRAD};
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .cm-hero-sub {
-          font-size: clamp(16px, 2.5vw, 18px);
-          line-height: 1.7;
-          color: #8892A8;
-          margin: 0 0 36px;
-          max-width: 480px;
-        }
-        .cm-hero-cta { display: flex; flex-wrap: wrap; gap: 12px; }
-        .cm-hero-visual { flex: 1; min-width: 0; }
-
-        /* Mockup */
-        .cm-mockup { position: relative; }
-        .cm-mockup-glow {
-          position: absolute;
-          inset: -20px;
-          background: radial-gradient(circle, rgba(124,92,255,0.2), transparent 70%);
-          filter: blur(24px);
-        }
-        .cm-mockup-inner {
-          position: relative;
-          border-radius: 24px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid ${BORDER};
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          overflow: hidden;
-          box-shadow: 0 24px 80px rgba(0,0,0,0.45);
-        }
-        .cm-mockup-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 18px 20px;
-          border-bottom: 1px solid ${BORDER};
-        }
-        .cm-mockup-title { font-weight: 700; font-size: 14px; }
-        .cm-mockup-online { font-size: 12px; color: #8892A8; margin-top: 4px; display: flex; align-items: center; gap: 6px; }
-        .cm-mockup-pill {
-          font-size: 11px;
-          font-weight: 700;
-          padding: 4px 10px;
-          border-radius: 12px;
-          background: rgba(34,197,94,0.15);
-          color: #4ade80;
-          border: 1px solid rgba(34,197,94,0.25);
-        }
-        .cm-mockup-body { display: flex; min-height: 260px; }
-        .cm-sidebar {
-          width: 38%;
-          padding: 14px 12px;
-          border-right: 1px solid ${BORDER};
-          background: rgba(0,0,0,0.15);
-        }
-        .cm-sidebar-label { font-size: 10px; color: #5C6478; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
-        .cm-group-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 8px 10px;
-          border-radius: 12px;
-          font-size: 11px;
-          color: #8892A8;
-          margin-bottom: 4px;
-        }
-        .cm-group-item.active { background: rgba(124,92,255,0.15); color: #C4B5FD; }
-        .cm-group-badge { font-size: 10px; color: #7C5CFF; font-weight: 700; }
-        .cm-chat { flex: 1; padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; justify-content: flex-end; }
-        .cm-bubble-wrap { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
-        .cm-bubble-wrap.mine { align-items: flex-end; }
-        .cm-bubble-name { font-size: 10px; color: #5C6478; }
-        .cm-bubble {
-          max-width: 85%;
-          padding: 9px 13px;
-          border-radius: 16px;
-          font-size: 12px;
-          line-height: 1.45;
-          background: rgba(255,255,255,0.06);
-          color: #D1D9E8;
-        }
-        .cm-bubble.mine { background: ${GRAD}; color: #fff; }
-        .cm-typing { font-size: 10px; color: #5C6478; display: flex; align-items: center; gap: 6px; }
-        .cm-dot {
-          width: 8px; height: 8px; border-radius: 50%;
-          background: #22c55e;
-          box-shadow: 0 0 8px rgba(34,197,94,0.6);
-          flex-shrink: 0;
         }
 
         /* Sections */
@@ -457,13 +284,6 @@ export default function CommunityPage() {
           .cm-content-grid { grid-template-columns: repeat(3, 1fr); }
         }
         @media (min-width: 900px) {
-          .cm-hero {
-            flex-direction: row;
-            align-items: center;
-            gap: 56px;
-            padding: 72px 0 96px;
-          }
-          .cm-hero-visual { max-width: 420px; }
           .cm-ai-grid { grid-template-columns: repeat(3, 1fr); }
           .cm-sticky-cta { display: none !important; }
         }
@@ -476,35 +296,9 @@ export default function CommunityPage() {
       <div className="cm-page">
         <div className="cm-ambient" />
 
-        <div className="cm-wrap">
-          {/* ── Hero ── */}
-          <section className="cm-hero">
-            <div className="cm-hero-copy">
-              <div className="cm-hero-badge">
-                <span className="cm-dot" style={{ width: 6, height: 6 }} />
-                真人社群 + AI 夥伴 · 即時在線
-              </div>
-              <h1>
-                找人聊天，<br />
-                也找得到<span>懂你的 AI 夥伴</span>。
-              </h1>
-              <p className="cm-hero-sub">
-                即時聊天室、興趣群組、AI 陪伴與每日內容，都在 EVONVCHAT。
-              </p>
-              <div className="cm-hero-cta">
-                <button type="button" className="cm-btn-primary" onClick={enterChat}>
-                  免費進入聊天室
-                </button>
-                <button type="button" className="cm-btn-ghost" onClick={scrollToLive}>
-                  看看大家在聊什麼
-                </button>
-              </div>
-            </div>
-            <div className="cm-hero-visual">
-              <ChatMockup />
-            </div>
-          </section>
+        <CommunityDualHero onEnterChat={enterChat} onExploreRooms={scrollToLive} />
 
+        <div className="cm-wrap">
           {/* ── Live Now ── */}
           <section className="cm-section" id="live-now">
             <div className="cm-section-label">Live now</div>
