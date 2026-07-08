@@ -1,7 +1,9 @@
 import Head from "next/head";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import WaitlistForm from "../components/WaitlistForm";
 import CommunityDualHero from "../components/CommunityDualHero";
+import SiteNav from "../components/SiteNav";
 import { COMPANION_META } from "../lib/aiCompanion";
 import { markEnterChat } from "../lib/communityIntro";
 
@@ -73,14 +75,24 @@ export default function CommunityPage() {
   return (
     <>
       <Head>
-        <link rel="stylesheet" href="/community-layout.css?v=3" />
+        <link rel="stylesheet" href="/community-layout.css?v=4" />
+        <link rel="stylesheet" href="/ai-prompt-enhancer.css?v=1" />
       </Head>
       <div className="cm-page">
       <div className="cm-ambient" />
+      <SiteNav />
 
       <CommunityDualHero onEnterChat={enterChat} onExploreRooms={scrollToLive} />
 
       <div className="cm-wrap">
+        <Link href="/ai-prompt-enhancer" className="ev-featured-tool">
+          <span className="ev-featured-tool-kicker">Featured Tool · New</span>
+          <h2 className="ev-featured-tool-title">AI Prompt Enhancer</h2>
+          <p className="ev-featured-tool-desc">
+            Turn simple Chinese or English ideas into polished English prompts for AI image and video tools.
+          </p>
+          <span className="ev-featured-tool-cta">Try it free →</span>
+        </Link>
         <section className="cm-section" id="live-now">
           <div className="cm-section-label">Live now</div>
           <h2 className="cm-section-title">現在有人在聊</h2>

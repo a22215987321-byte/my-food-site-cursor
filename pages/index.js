@@ -335,6 +335,20 @@ export default function Home() {
               <li key={line} style={{ color: '#64748b', fontSize: 13 }}>· {line}</li>
             ))}
           </ul>
+          <Link href="/ai-prompt-enhancer" style={{
+            display: 'block', marginTop: 22, padding: '18px 20px', borderRadius: 16, textDecoration: 'none',
+            background: 'linear-gradient(135deg, rgba(124,92,255,0.18), rgba(59,130,246,0.1))',
+            border: '1px solid rgba(124,92,255,0.28)', boxShadow: '0 12px 32px rgba(124,92,255,0.15)',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', marginBottom: 8 }}>
+              Featured Tool
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#f8faff', marginBottom: 6 }}>AI Prompt Enhancer</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: '#94a3b8' }}>
+              把簡單想法變成高質量英文 AI 圖片 / 影片提示詞
+            </div>
+            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: '#67e8f9' }}>Try it now →</div>
+          </Link>
         </div>
         <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, border: '1px solid #334155' }}>
           {/* Tab switch */}
