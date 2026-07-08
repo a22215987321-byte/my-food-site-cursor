@@ -341,13 +341,17 @@ export default function Home() {
             border: '1px solid rgba(124,92,255,0.28)', boxShadow: '0 12px 32px rgba(124,92,255,0.15)',
           }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', marginBottom: 8 }}>
-              Featured Tool
+              Featured Tool / 主打工具
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#f8faff', marginBottom: 6 }}>AI Prompt Enhancer</div>
-            <div style={{ fontSize: 13, lineHeight: 1.6, color: '#94a3b8' }}>
-              把簡單想法變成高質量英文 AI 圖片 / 影片提示詞
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#f8faff', marginBottom: 4 }}>AI Prompt Enhancer</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#c4b5fd', marginBottom: 10 }}>AI 提示詞優化器</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: '#cbd5e1', marginBottom: 6 }}>
+              Turn rough ideas into ready-to-use prompts for AI image and video tools.
             </div>
-            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: '#67e8f9' }}>Try it now →</div>
+            <div style={{ fontSize: 13, lineHeight: 1.65, color: '#94a3b8', marginBottom: 10 }}>
+              把簡單想法變成可直接用於 AI 圖片 / AI 影片工具的提示詞。
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#67e8f9' }}>Try It / 立即試用 →</div>
           </Link>
         </div>
         <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, border: '1px solid #334155' }}>

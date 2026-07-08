@@ -1,7 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import SiteNav from "../components/SiteNav";
+import LangToggle from "../components/LangToggle";
 import {
   OUTPUT_TYPES,
   STYLES,
@@ -9,8 +10,15 @@ import {
   enhancePrompt,
   getExampleResult,
 } from "../lib/aiPromptEnhancer";
+import {
+  COPY,
+  LANG_STORAGE_KEY,
+  getInitialLang,
+  getTypeLabel,
+  getStyleLabel,
+} from "../lib/aiPromptEnhancerI18n";
 
-function CopyButton({ text }) {
+function CopyButton({ text, copyLabel, copiedLabel }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -29,18 +37,18 @@ function CopyButton({ text }) {
       className={`ape-copy-btn${copied ? " copied" : ""}`}
       onClick={handleCopy}
     >
-      {copied ? "Copied" : "Copy"}
+      {copied ? copiedLabel : copyLabel}
     </button>
   );
 }
 
-function OutputCard({ title, text }) {
+function OutputCard({ title, text, copyLabel, copiedLabel }) {
   if (!text) return null;
   return (
     <div className="ape-output-card">
       <div className="ape-output-head">
         <span className="ape-output-title">{title}</span>
-        <CopyButton text={text} />
+        <CopyButton text={text} copyLabel={copyLabel} copiedLabel={copiedLabel} />
       </div>
       <p className="ape-output-text">{text}</p>
     </div>
@@ -49,22 +57,37 @@ function OutputCard({ title, text }) {
 
 export default function AiPromptEnhancerPage() {
   const workspaceRef = useRef(null);
+  const [lang, setLang] = useState("zh");
   const [idea, setIdea] = useState("");
   const [outputType, setOutputType] = useState("image");
   const [style, setStyle] = useState("Realistic");
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    setLang(getInitialLang());
+  }, []);
+
+  const setLanguage = (next) => {
+    setLang(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(LANG_STORAGE_KEY, next);
+    }
+  };
+
+  const t = COPY[lang];
+
   const scrollToWorkspace = () => {
     workspaceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const runEnhance = (nextIdea, nextType, nextStyle) => {
+  const runEnhance = (nextIdea, nextType, nextStyle, tipsText = COPY[lang].usageTips) => {
     const trimmed = String(nextIdea || "").trim();
     if (!trimmed) return;
     setBusy(true);
     window.setTimeout(() => {
-      setResult(enhancePrompt(trimmed, nextType, nextStyle));
+      const output = enhancePrompt(trimmed, nextType, nextStyle);
+      setResult({ ...output, tips: tipsText });
       setBusy(false);
     }, 420);
   };
@@ -82,57 +105,75 @@ export default function AiPromptEnhancerPage() {
     scrollToWorkspace();
   };
 
+  useEffect(() => {
+    if (result) {
+      setResult((prev) => (prev ? { ...prev, tips: COPY[lang].usageTips } : prev));
+    }
+  }, [lang]);
+
   return (
     <>
       <Head>
-        <title>AI Prompt Enhancer — EvonVChat</title>
-        <meta
-          name="description"
-          content="Turn simple Chinese or English ideas into high-quality AI image and video prompts."
-        />
-        <link rel="stylesheet" href="/ai-prompt-enhancer.css?v=1" />
+        <title>{t.metaTitle}</title>
+        <meta name="description" content={t.metaDescription} />
+        <link rel="stylesheet" href="/ai-prompt-enhancer.css?v=3" />
       </Head>
 
       <div className="ape-page">
         <div className="ape-ambient" />
-        <SiteNav />
+        <SiteNav extra={<LangToggle lang={lang} onChange={setLanguage} />} />
 
         <main className="ape-wrap">
           <section className="ape-hero">
-            <div className="ape-badge">
-              <span className="ape-badge-dot" />
-              EvonVChat Tools
+            <div className="ape-hero-top">
+              <div className="ape-badge">
+                <span className="ape-badge-dot" />
+                {t.badge}
+              </div>
+              <div className="ape-hero-lang-mobile">
+                <LangToggle lang={lang} onChange={setLanguage} />
+              </div>
             </div>
-            <h1 className="ape-title">AI Prompt Enhancer</h1>
-            <p className="ape-subtitle">
-              Turn simple ideas into high-quality AI image and video prompts.
-            </p>
-            <p className="ape-subtitle-zh">
-              把簡單中文想法變成可直接使用的英文 AI 圖片 / 影片提示詞。
-            </p>
+            <h1 className="ape-title">{t.heroTitle}</h1>
+            <p className="ape-subtitle">{t.heroSubtitle}</p>
             <button type="button" className="ape-hero-cta" onClick={scrollToWorkspace}>
-              Try It Now
+              {t.heroCta}
             </button>
+          </section>
+
+          <section className="ape-steps">
+            <div className="ape-section-label">{t.howItWorksLabel}</div>
+            <div className="ape-steps-grid">
+              {t.howItWorks.map((item) => (
+                <article key={item.step} className="ape-step-card">
+                  <div className="ape-step-num">
+                    {t.stepPrefix} {item.step}
+                  </div>
+                  <h3 className="ape-step-title">{item.title}</h3>
+                  <p className="ape-step-body">{item.body}</p>
+                </article>
+              ))}
+            </div>
           </section>
 
           <section className="ape-workspace" id="workspace" ref={workspaceRef}>
             <div className="ape-panel">
-              <h2 className="ape-panel-title">Prompt Studio</h2>
+              <h2 className="ape-panel-title">{t.studioTitle}</h2>
 
-              <label className="ape-label" htmlFor="idea-input">
-                Describe your idea
+              <label htmlFor="idea-input" className="ape-label">
+                {t.ideaLabel}
               </label>
               <textarea
                 id="idea-input"
                 className="ape-textarea"
                 value={idea}
                 onChange={(e) => setIdea(e.target.value)}
-                placeholder="例如：一個白人瘦子對著鏡子，逼真動態，有電影感"
+                placeholder={t.ideaPlaceholder}
               />
 
               <div className="ape-options">
                 <div className="ape-option-group">
-                  <span className="ape-label">Output Type</span>
+                  <span className="ape-label">{t.outputTypeLabel}</span>
                   <div className="ape-chips">
                     {OUTPUT_TYPES.map((type) => (
                       <button
@@ -141,23 +182,23 @@ export default function AiPromptEnhancerPage() {
                         className={`ape-chip${outputType === type.id ? " active" : ""}`}
                         onClick={() => setOutputType(type.id)}
                       >
-                        {type.label}
+                        {getTypeLabel(type, lang)}
                       </button>
                     ))}
                   </div>
                 </div>
 
                 <div className="ape-option-group">
-                  <span className="ape-label">Style</span>
+                  <span className="ape-label">{t.styleLabel}</span>
                   <div className="ape-chips">
                     {STYLES.map((item) => (
                       <button
-                        key={item}
+                        key={item.id}
                         type="button"
-                        className={`ape-chip${style === item ? " active" : ""}`}
-                        onClick={() => setStyle(item)}
+                        className={`ape-chip${style === item.id ? " active" : ""}`}
+                        onClick={() => setStyle(item.id)}
                       >
-                        {item}
+                        {getStyleLabel(item, lang)}
                       </button>
                     ))}
                   </div>
@@ -170,31 +211,69 @@ export default function AiPromptEnhancerPage() {
                 onClick={handleEnhance}
                 disabled={busy || !idea.trim()}
               >
-                {busy ? "Enhancing..." : "Enhance Prompt"}
+                {busy ? t.enhancingBtn : t.enhanceBtn}
               </button>
             </div>
 
             <div className="ape-panel">
-              <h2 className="ape-panel-title">Results</h2>
+              <h2 className="ape-panel-title">{t.resultsTitle}</h2>
+
+              <div className="ape-results-note">
+                <p>{t.resultsNote}</p>
+              </div>
+
               {!result ? (
                 <div className="ape-empty">
-                  Enter an idea and click Enhance Prompt. Your enhanced English prompt,
-                  short version, negative prompt, and usage tips will appear here.
+                  <p>{t.resultsEmpty}</p>
                 </div>
               ) : (
                 <div className="ape-output-grid">
-                  <OutputCard title="Enhanced Prompt" text={result.enhanced} />
-                  <OutputCard title="Short Version" text={result.short} />
-                  <OutputCard title="Negative Prompt" text={result.negative} />
-                  <OutputCard title="Usage Tips" text={result.tips} />
+                  <OutputCard
+                    title={t.enhancedTitle}
+                    text={result.enhanced}
+                    copyLabel={t.copyBtn}
+                    copiedLabel={t.copiedBtn}
+                  />
+                  <OutputCard
+                    title={t.shortTitle}
+                    text={result.short}
+                    copyLabel={t.copyBtn}
+                    copiedLabel={t.copiedBtn}
+                  />
+                  <OutputCard
+                    title={t.negativeTitle}
+                    text={result.negative}
+                    copyLabel={t.copyBtn}
+                    copiedLabel={t.copiedBtn}
+                  />
+                  <OutputCard
+                    title={t.tipsTitle}
+                    text={result.tips}
+                    copyLabel={t.copyBtn}
+                    copiedLabel={t.copiedBtn}
+                  />
                 </div>
               )}
             </div>
           </section>
 
           <section className="ape-section">
-            <div className="ape-section-label">Examples</div>
-            <h2 className="ape-section-title">Start from a proven prompt</h2>
+            <div className="ape-section-label">{t.useCasesLabel}</div>
+            <h2 className="ape-section-title">{t.useCasesTitle}</h2>
+            <div className="ape-use-grid">
+              {t.useCases.map((card) => (
+                <article key={card.title} className="ape-use-card">
+                  <h3 className="ape-use-title">{card.title}</h3>
+                  <p className="ape-use-tools">{card.tools}</p>
+                  <p className="ape-use-body">{card.uses}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="ape-section">
+            <div className="ape-section-label">{t.examplesLabel}</div>
+            <h2 className="ape-section-title">{t.examplesTitle}</h2>
             <div className="ape-examples-grid">
               {PROMPT_EXAMPLES.map((example) => {
                 const preview = getExampleResult(example);
@@ -202,11 +281,11 @@ export default function AiPromptEnhancerPage() {
                   <article key={example.id} className="ape-example-card">
                     <h3 className="ape-example-title">{example.title}</h3>
                     <div className="ape-example-block">
-                      <span className="ape-example-label">Before prompt</span>
+                      <span className="ape-example-label">{t.beforeLabel}</span>
                       <p className="ape-example-text">{example.before}</p>
                     </div>
                     <div className="ape-example-block">
-                      <span className="ape-example-label">After prompt</span>
+                      <span className="ape-example-label">{t.afterLabel}</span>
                       <p className="ape-example-text after">{preview.short}</p>
                     </div>
                     <button
@@ -214,7 +293,7 @@ export default function AiPromptEnhancerPage() {
                       className="ape-use-btn"
                       onClick={() => applyExample(example)}
                     >
-                      Use Example
+                      {t.useExampleBtn}
                     </button>
                   </article>
                 );
@@ -223,18 +302,16 @@ export default function AiPromptEnhancerPage() {
           </section>
 
           <section className="ape-product">
-            <span className="ape-product-badge">Prompt Pro Pack</span>
-            <h2 className="ape-product-title">Prompt Pro Pack — US$9</h2>
-            <p className="ape-product-price">One-time purchase · Instant access</p>
+            <span className="ape-product-badge">{t.productBadge}</span>
+            <h2 className="ape-product-title">{t.productTitle}</h2>
+            <p className="ape-product-price">{t.productPrice}</p>
             <ul className="ape-product-list">
-              <li>100 high-quality image prompts</li>
-              <li>50 video prompts</li>
-              <li>20 camera movement prompts</li>
-              <li>20 character consistency prompts</li>
-              <li>10 negative prompt templates</li>
+              {t.productItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
             <Link href="/community#waitlist" className="ape-buy-btn">
-              Buy Now
+              {t.buyBtn}
             </Link>
           </section>
         </main>

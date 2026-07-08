@@ -76,7 +76,7 @@ export default function CommunityPage() {
     <>
       <Head>
         <link rel="stylesheet" href="/community-layout.css?v=4" />
-        <link rel="stylesheet" href="/ai-prompt-enhancer.css?v=1" />
+        <link rel="stylesheet" href="/ai-prompt-enhancer.css?v=2" />
       </Head>
       <div className="cm-page">
       <div className="cm-ambient" />
@@ -86,12 +86,16 @@ export default function CommunityPage() {
 
       <div className="cm-wrap">
         <Link href="/ai-prompt-enhancer" className="ev-featured-tool">
-          <span className="ev-featured-tool-kicker">Featured Tool · New</span>
-          <h2 className="ev-featured-tool-title">AI Prompt Enhancer</h2>
-          <p className="ev-featured-tool-desc">
-            Turn simple Chinese or English ideas into polished English prompts for AI image and video tools.
+          <span className="ev-featured-tool-kicker">Featured Tool · New / 主打工具</span>
+          <p className="ev-featured-tool-title-en">AI Prompt Enhancer</p>
+          <p className="ev-featured-tool-title-zh">AI 提示詞優化器</p>
+          <p className="ev-featured-tool-desc-en">
+            Turn rough ideas into ready-to-use prompts for AI image and video tools.
           </p>
-          <span className="ev-featured-tool-cta">Try it free →</span>
+          <p className="ev-featured-tool-desc-zh">
+            把簡單想法變成可直接用於 AI 圖片 / AI 影片工具的提示詞。
+          </p>
+          <span className="ev-featured-tool-cta">Try It / 立即試用 →</span>
         </Link>
         <section className="cm-section" id="live-now">
           <div className="cm-section-label">Live now</div>

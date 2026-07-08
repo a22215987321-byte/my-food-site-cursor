@@ -7,7 +7,7 @@ const LINKS = [
   { href: "/ai-prompt-enhancer", label: "AI Prompt Enhancer", highlight: true },
 ];
 
-export default function SiteNav() {
+export default function SiteNav({ extra = null }) {
   const router = useRouter();
 
   return (
@@ -34,6 +34,7 @@ export default function SiteNav() {
             </Link>
           ))}
         </nav>
+        {extra ? <div className="ev-nav-extra">{extra}</div> : null}
         <Link href="/" className="ev-nav-cta">
           Enter Chat
         </Link>
