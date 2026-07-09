@@ -141,6 +141,21 @@ export default function AiPromptEnhancerPage() {
             </button>
           </section>
 
+          <section className="ape-steps">
+            <div className="ape-section-label">{t.howItWorksLabel}</div>
+            <div className="ape-steps-grid">
+              {t.howItWorks.map((item) => (
+                <article key={item.step} className="ape-step-card">
+                  <div className="ape-step-num">
+                    {t.stepPrefix} {item.step}
+                  </div>
+                  <h3 className="ape-step-title">{item.title}</h3>
+                  <p className="ape-step-body">{item.body}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
           <section className="ape-workspace" id="workspace" ref={workspaceRef}>
             <div className="ape-panel">
               <h2 className="ape-panel-title">{t.studioTitle}</h2>
