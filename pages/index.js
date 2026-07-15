@@ -12,6 +12,11 @@ import {
   teachingExamples,
   verbMetadata,
 } from "../lib/spanishVerbConjugationData";
+import {
+  A1_AUTO_QUESTION_COUNT,
+  A1_EXAM_QUESTIONS,
+  A1_EXAM_SECTIONS,
+} from "../lib/spanishA1ExamData";
 
 const CEFR_LEVELS = ["全部", "A1", "A2", "B1"];
 const FREQUENCY_LEVELS = ["全部", "5", "4", "3"];
@@ -299,6 +304,252 @@ function PracticeMode({ selectedVerbKey, wrongItems, setWrongItems }) {
   );
 }
 
+function A1ComprehensiveExam() {
+  const [started, setStarted] = useState(false);
+  const [activeSection, setActiveSection] = useState("reading");
+  const [answers, setAnswers] = useState({});
+  const [checks, setChecks] = useState({});
+  const [showSamples, setShowSamples] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  const objectiveQuestions = A1_EXAM_QUESTIONS.filter((question) => question.type === "choice");
+  const answeredObjective = objectiveQuestions.filter((question) => answers[question.id]).length;
+  const score = objectiveQuestions.filter((question) => answers[question.id] === question.answer).length;
+  const percentage = Math.round((score / A1_AUTO_QUESTION_COUNT) * 100);
+  const visibleQuestions = A1_EXAM_QUESTIONS.filter((question) => question.section === activeSection);
+  const currentSection = A1_EXAM_SECTIONS.find((section) => section.key === activeSection);
+
+  const sectionScore = (sectionKey) => {
+    const questions = objectiveQuestions.filter((question) => question.section === sectionKey);
+    if (!questions.length) return null;
+    return {
+      correct: questions.filter((question) => answers[question.id] === question.answer).length,
+      total: questions.length,
+    };
+  };
+
+  const beginExam = () => {
+    setAnswers({});
+    setChecks({});
+    setShowSamples({});
+    setSubmitted(false);
+    setNotice("");
+    setActiveSection("reading");
+    setStarted(true);
+  };
+
+  const submitExam = () => {
+    const missing = A1_AUTO_QUESTION_COUNT - answeredObjective;
+    if (missing > 0) {
+      setNotice(`還有 ${missing} 題客觀題未作答，完成後才能交卷。`);
+      return;
+    }
+    setNotice("");
+    setSubmitted(true);
+  };
+
+  const goToSection = (sectionKey) => {
+    setActiveSection(sectionKey);
+    setNotice("");
+  };
+
+  if (!started) {
+    return (
+      <section className="section-block a1-exam-panel" id="a1-exam">
+        <div className="exam-intro">
+          <div>
+            <p className="eyebrow">A1 Spanish Exam</p>
+            <h2>西班牙語 DELE A1 模擬考</h2>
+            <p>依 DELE A1 題型設計閱讀、聽力、寫作與口說四大科。選擇題立即計分，寫作與口說提供參考答案及自我檢核。</p>
+          </div>
+          <button type="button" className="exam-primary" onClick={beginExam}>開始 A1 模擬考</button>
+        </div>
+        <div className="exam-overview-grid">
+          {A1_EXAM_SECTIONS.map((section, index) => (
+            <article key={section.key}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{section.label} <small>{section.es}</small></h3>
+                <p>{section.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="exam-facts">
+          <span><strong>23</strong> 個完整任務</span>
+          <span><strong>18</strong> 題自動計分</span>
+          <span><strong>95</strong> 分鐘筆試時間</span>
+          <span><strong>60%</strong> A1 達標參考</span>
+        </div>
+      </section>
+    );
+  }
+
+  if (submitted) {
+    return (
+      <section className="section-block a1-exam-panel" id="a1-exam">
+        <div className="exam-result-head">
+          <div className={`score-ring ${percentage >= 60 ? "passed" : "needs-work"}`}>
+            <strong>{percentage}</strong><span>分</span>
+          </div>
+          <div>
+            <p className="eyebrow">Exam Result</p>
+            <h2>{percentage >= 80 ? "A1 基礎很穩定" : percentage >= 60 ? "已達 A1 入門標準" : "再複習一次就更接近 A1"}</h2>
+            <p>客觀題答對 {score} / {A1_AUTO_QUESTION_COUNT}。寫作與口說屬自我檢核，不列入自動分數。</p>
+          </div>
+        </div>
+        <div className="result-breakdown">
+          {A1_EXAM_SECTIONS.map((section) => {
+            const result = sectionScore(section.key);
+            const completed = A1_EXAM_QUESTIONS
+              .filter((question) => question.section === section.key && question.type !== "choice")
+              .some((question) => (answers[question.id] || "").trim() || Object.keys(checks).some((key) => key.startsWith(`${question.id}-`) && checks[key]));
+            return (
+              <article key={section.key}>
+                <span>{section.label}</span>
+                <strong>{result ? `${result.correct} / ${result.total}` : completed ? "已完成" : "待練習"}</strong>
+              </article>
+            );
+          })}
+        </div>
+        <div className="answer-review">
+          <h3>需要複習的題目</h3>
+          {objectiveQuestions.filter((question) => answers[question.id] !== question.answer).length ? (
+            objectiveQuestions.filter((question) => answers[question.id] !== question.answer).map((question) => (
+              <article key={question.id}>
+                <p>{question.prompt}</p>
+                <span>正確答案：<strong>{question.answer}</strong></span>
+                <small>{question.explanation}</small>
+              </article>
+            ))
+          ) : <p className="perfect-message">客觀題全部答對。</p>}
+        </div>
+        <button type="button" className="exam-primary" onClick={beginExam}>重新測驗</button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="section-block a1-exam-panel" id="a1-exam">
+      <div className="exam-toolbar">
+        <div>
+          <p className="eyebrow">A1 Spanish Exam</p>
+          <h2>西班牙語 DELE A1 模擬考</h2>
+        </div>
+        <div className="exam-progress-copy">客觀題 {answeredObjective} / {A1_AUTO_QUESTION_COUNT}</div>
+      </div>
+      <div className="exam-progress-track" aria-label={`已完成 ${answeredObjective} 題`}>
+        <span style={{ width: `${(answeredObjective / A1_AUTO_QUESTION_COUNT) * 100}%` }} />
+      </div>
+      <div className="exam-tabs" role="tablist" aria-label="考試區域">
+        {A1_EXAM_SECTIONS.map((section, index) => (
+          <button
+            key={section.key}
+            type="button"
+            className={activeSection === section.key ? "active" : ""}
+            onClick={() => goToSection(section.key)}
+          >
+            <span>{index + 1}</span>{section.label}
+          </button>
+        ))}
+      </div>
+      <div className="exam-section-head">
+        <div>
+          <h3>{currentSection.label}</h3>
+          <p>{currentSection.es} · {currentSection.description}</p>
+        </div>
+        <span>{visibleQuestions.length} 題</span>
+      </div>
+      <div className="exam-question-list">
+        {visibleQuestions.map((question, questionIndex) => (
+          <article key={question.id} className="exam-question-card">
+            <div className="question-number">{questionIndex + 1}</div>
+            <div className="question-content">
+              <p className="question-task">{question.task}</p>
+              {question.passage && <div className="reading-passage" lang="es">{question.passage}</div>}
+              {question.audioText && (
+                <div className="listening-controls">
+                  <button type="button" className="listen-button" onClick={() => speak(question.audioText)}>▶ 播放聽力音訊</button>
+                  <button type="button" className="outline-command" onClick={() => setShowSamples((items) => ({ ...items, [question.id]: !items[question.id] }))}>
+                    {showSamples[question.id] ? "隱藏逐字稿" : "顯示逐字稿"}
+                  </button>
+                </div>
+              )}
+              {question.audioText && showSamples[question.id] && <div className="audio-transcript" lang="es"><strong>Transcript</strong>{question.audioText}</div>}
+              <h4>{question.prompt}</h4>
+              {question.type === "choice" && (
+                <div className="exam-options">
+                  {question.options.map((option) => (
+                    <label key={option} className={answers[question.id] === option ? "selected" : ""}>
+                      <input
+                        type="radio"
+                        name={question.id}
+                        value={option}
+                        checked={answers[question.id] === option}
+                        onChange={() => setAnswers((items) => ({ ...items, [question.id]: option }))}
+                      />
+                      <span>{option}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {question.type === "text" && (
+                <>
+                  <textarea
+                    value={answers[question.id] || ""}
+                    onChange={(event) => setAnswers((items) => ({ ...items, [question.id]: event.target.value }))}
+                    placeholder={question.placeholder}
+                    rows={5}
+                  />
+                  <div className="word-count">目前約 {(answers[question.id] || "").trim().split(/\s+/).filter(Boolean).length} 個單字</div>
+                  <button type="button" className="outline-command" onClick={() => setShowSamples((items) => ({ ...items, [question.id]: !items[question.id] }))}>
+                    {showSamples[question.id] ? "隱藏參考答案" : "查看參考答案"}
+                  </button>
+                  {showSamples[question.id] && <p className="speaking-sample" lang="es">{question.sample}</p>}
+                </>
+              )}
+              {question.type === "speaking" && (
+                <div className="speaking-tools">
+                  <button type="button" className="outline-command" onClick={() => setShowSamples((items) => ({ ...items, [question.id]: !items[question.id] }))}>
+                    {showSamples[question.id] ? "隱藏參考答案" : "查看參考答案"}
+                  </button>
+                  {showSamples[question.id] && <p className="speaking-sample" lang="es">{question.sample}</p>}
+                </div>
+              )}
+              {question.checklist && (
+                <div className="self-checklist">
+                  <p>完成後自我檢核</p>
+                  {question.checklist.map((item, itemIndex) => {
+                    const checkKey = `${question.id}-${itemIndex}`;
+                    return (
+                      <label key={checkKey}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(checks[checkKey])}
+                          onChange={(event) => setChecks((values) => ({ ...values, [checkKey]: event.target.checked }))}
+                        />
+                        <span>{item}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="exam-footer">
+        <div>
+          {notice && <p className="exam-notice">{notice}</p>}
+          <span>完成六個區域後交卷，系統會立即分析弱項。</span>
+        </div>
+        <button type="button" className="exam-primary" onClick={submitExam}>交卷並查看結果</button>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const allVerbs = useMemo(() => getVerbList(), []);
   const [query, setQuery] = useState("ser");
@@ -438,6 +689,7 @@ export default function Home() {
           <CategoryExplorer verbs={filteredVerbs} onSelectVerb={selectVerb} />
           <TeachingSection onSelectVerb={selectVerb} />
           <PracticeMode selectedVerbKey={selectedVerbKey} wrongItems={wrongItems} setWrongItems={setWrongItems} />
+          <A1ComprehensiveExam />
         </div>
       </main>
       <style jsx global>{`
@@ -704,10 +956,225 @@ export default function Home() {
           font-weight: 800;
         }
         .wrong-count { color: #647086; font-size: 14px; }
+        .a1-exam-panel {
+          display: grid;
+          gap: 22px;
+          border-top: 5px solid #d94734;
+          background: #fff;
+        }
+        .exam-intro, .exam-result-head, .exam-toolbar, .exam-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+        }
+        .exam-intro h2, .exam-toolbar h2, .exam-result-head h2 {
+          margin: 0;
+          color: #172033;
+          font-size: 32px;
+          letter-spacing: 0;
+        }
+        .exam-intro p:not(.eyebrow), .exam-result-head p:not(.eyebrow) {
+          max-width: 760px;
+          margin: 10px 0 0;
+          color: #5d687c;
+          line-height: 1.7;
+        }
+        .exam-primary {
+          min-height: 48px;
+          border: 0;
+          border-radius: 8px;
+          background: #d94734;
+          color: #fff;
+          padding: 0 20px;
+          font-weight: 900;
+          cursor: pointer;
+          white-space: nowrap;
+          box-shadow: 0 8px 18px rgba(217, 71, 52, 0.18);
+        }
+        .exam-primary:hover { background: #b93627; }
+        .exam-overview-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+        }
+        .exam-overview-grid article {
+          display: flex;
+          gap: 12px;
+          min-height: 118px;
+          border: 1px solid #dfe5ed;
+          border-radius: 8px;
+          padding: 16px;
+          background: #fbfcfe;
+        }
+        .exam-overview-grid article > span {
+          color: #d94734;
+          font-size: 13px;
+          font-weight: 900;
+        }
+        .exam-overview-grid h3 { margin: 0; font-size: 17px; }
+        .exam-overview-grid h3 small { display: block; margin-top: 4px; color: #657086; font-size: 12px; font-weight: 700; }
+        .exam-overview-grid p { margin: 10px 0 0; color: #657086; font-size: 13px; line-height: 1.5; }
+        .exam-facts {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          border: 1px solid #dfe5ed;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .exam-facts span { padding: 14px; color: #687287; text-align: center; background: #f6f8fb; }
+        .exam-facts span + span { border-left: 1px solid #dfe5ed; }
+        .exam-facts strong { color: #172033; font-size: 18px; }
+        .exam-progress-copy { color: #536078; font-weight: 800; }
+        .exam-progress-track { height: 8px; border-radius: 4px; background: #e9edf3; overflow: hidden; }
+        .exam-progress-track span { display: block; height: 100%; border-radius: inherit; background: #168678; transition: width 180ms ease; }
+        .exam-tabs {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 8px;
+        }
+        .exam-tabs button {
+          min-height: 48px;
+          border: 1px solid #d8dfe9;
+          border-radius: 8px;
+          background: #fff;
+          color: #48546a;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .exam-tabs button span {
+          display: inline-grid;
+          place-items: center;
+          width: 24px;
+          height: 24px;
+          margin-right: 7px;
+          border-radius: 50%;
+          background: #eef1f5;
+          font-size: 12px;
+        }
+        .exam-tabs button.active { border-color: #172033; background: #172033; color: #fff; }
+        .exam-tabs button.active span { background: #d94734; color: #fff; }
+        .exam-section-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          padding: 16px 0;
+          border-top: 1px solid #e4e8ef;
+          border-bottom: 1px solid #e4e8ef;
+        }
+        .exam-section-head h3 { margin: 0; font-size: 24px; }
+        .exam-section-head p { margin: 5px 0 0; color: #657086; }
+        .exam-section-head > span { color: #168678; font-weight: 900; }
+        .exam-question-list { display: grid; gap: 14px; }
+        .exam-question-card {
+          display: grid;
+          grid-template-columns: 38px minmax(0, 1fr);
+          gap: 14px;
+          border: 1px solid #dfe5ed;
+          border-radius: 8px;
+          padding: 18px;
+          background: #fff;
+        }
+        .question-number {
+          display: grid;
+          place-items: center;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: #172033;
+          color: #fff;
+          font-weight: 900;
+        }
+        .question-content { min-width: 0; }
+        .question-task { margin: 0 0 8px; color: #d94734; font-size: 12px; font-weight: 900; text-transform: uppercase; }
+        .question-content h4 { margin: 14px 0; color: #172033; font-size: 18px; line-height: 1.5; }
+        .reading-passage, .audio-transcript {
+          border-left: 4px solid #e5b73b;
+          border-radius: 4px;
+          background: #fff9e8;
+          color: #29354a;
+          padding: 14px 16px;
+          line-height: 1.7;
+        }
+        .audio-transcript { display: grid; gap: 5px; margin-top: 10px; border-left-color: #168678; background: #edf8f5; }
+        .audio-transcript strong { color: #137368; font-size: 12px; text-transform: uppercase; }
+        .listening-controls, .speaking-tools { display: flex; flex-wrap: wrap; gap: 9px; }
+        .listen-button, .outline-command {
+          min-height: 40px;
+          border: 1px solid #cfd7e3;
+          border-radius: 8px;
+          background: #fff;
+          color: #26344d;
+          padding: 0 14px;
+          font-weight: 800;
+          cursor: pointer;
+        }
+        .listen-button { border-color: #168678; background: #168678; color: #fff; }
+        .exam-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+        .exam-options label {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 52px;
+          border: 1px solid #d8dfe9;
+          border-radius: 8px;
+          padding: 10px 12px;
+          color: #37445a;
+          cursor: pointer;
+        }
+        .exam-options label.selected { border-color: #168678; background: #edf8f5; color: #0e695f; font-weight: 800; }
+        .exam-options input { accent-color: #168678; }
+        .question-content textarea {
+          width: 100%;
+          resize: vertical;
+          border: 1px solid #cfd7e3;
+          border-radius: 8px;
+          padding: 14px;
+          color: #172033;
+          line-height: 1.7;
+          outline: none;
+        }
+        .question-content textarea:focus { border-color: #168678; box-shadow: 0 0 0 3px rgba(22, 134, 120, 0.12); }
+        .word-count { margin: 7px 0 10px; color: #6a7588; font-size: 13px; }
+        .speaking-sample { margin: 10px 0 0; border-radius: 8px; background: #eef4ff; color: #243c68; padding: 14px; line-height: 1.7; }
+        .self-checklist { display: grid; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e4e8ef; }
+        .self-checklist > p { margin: 0 0 2px; color: #526078; font-weight: 800; }
+        .self-checklist label { display: flex; align-items: center; gap: 9px; color: #4b586e; }
+        .self-checklist input { accent-color: #168678; }
+        .exam-footer { padding-top: 18px; border-top: 1px solid #e4e8ef; }
+        .exam-footer span { color: #687287; font-size: 14px; }
+        .exam-notice { margin: 0 0 5px; color: #b93627; font-weight: 900; }
+        .score-ring {
+          flex: 0 0 132px;
+          height: 132px;
+          border: 10px solid #d94734;
+          border-radius: 50%;
+          display: grid;
+          place-content: center;
+          text-align: center;
+        }
+        .score-ring.passed { border-color: #168678; }
+        .score-ring strong { font-size: 42px; line-height: 1; }
+        .score-ring span { color: #6b7587; font-size: 13px; }
+        .result-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .result-breakdown article { border: 1px solid #dfe5ed; border-radius: 8px; padding: 14px; background: #f8fafc; }
+        .result-breakdown span, .result-breakdown strong { display: block; }
+        .result-breakdown span { color: #687287; font-size: 13px; }
+        .result-breakdown strong { margin-top: 5px; font-size: 20px; }
+        .answer-review { display: grid; gap: 9px; }
+        .answer-review h3 { margin: 0 0 4px; }
+        .answer-review article { display: grid; gap: 5px; border-left: 4px solid #d94734; background: #fff4f1; padding: 12px 14px; }
+        .answer-review p, .answer-review span, .answer-review small, .perfect-message { margin: 0; }
+        .answer-review small { color: #687287; }
+        .perfect-message { color: #147466; font-weight: 800; }
         @media (max-width: 1100px) {
           .meta-grid { grid-template-columns: repeat(3, 1fr); }
           .utility-panel { grid-template-columns: 1fr; }
           .filters, .category-grid, .rule-grid { grid-template-columns: repeat(2, 1fr); }
+          .exam-overview-grid, .exam-facts { grid-template-columns: repeat(2, 1fr); }
+          .exam-facts span:nth-child(3) { border-left: 0; border-top: 1px solid #dfe5ed; }
+          .exam-facts span:nth-child(4) { border-top: 1px solid #dfe5ed; }
         }
         @media (max-width: 720px) {
           .verb-page { padding: 16px 12px 48px; }
@@ -718,6 +1185,14 @@ export default function Home() {
           .person-strip { grid-template-columns: repeat(6, 220px); }
           .verb-head h2 { font-size: 34px; }
           .favorite-button, .search-row button { width: 100%; }
+          .exam-intro, .exam-result-head, .exam-toolbar, .exam-footer { flex-direction: column; align-items: stretch; }
+          .exam-overview-grid, .exam-facts, .exam-tabs, .result-breakdown, .exam-options { grid-template-columns: 1fr; }
+          .exam-facts span + span { border-left: 0; border-top: 1px solid #dfe5ed; }
+          .exam-question-card { grid-template-columns: 1fr; padding: 14px; }
+          .exam-tabs { display: flex; overflow-x: auto; padding-bottom: 4px; }
+          .exam-tabs button { min-width: 130px; }
+          .exam-primary { width: 100%; }
+          .score-ring { align-self: center; }
         }
       `}</style>
     </>
