@@ -619,6 +619,11 @@ export default function Home() {
       </Head>
       <main className="verb-page">
         <div className="page-shell">
+          <a className="mobile-exam-shortcut" href="#a1-exam">
+            <span>DELE A1</span>
+            <strong>直接進入手機模擬考</strong>
+            <span aria-hidden="true">↓</span>
+          </a>
           <form className="search-panel" onSubmit={handleSearch}>
             <div>
               <label htmlFor="verb-search">搜尋西班牙語動詞</label>
@@ -715,6 +720,7 @@ export default function Home() {
           display: grid;
           gap: 22px;
         }
+        .mobile-exam-shortcut { display: none; }
         .search-panel, .summary-card, .utility-panel, .section-block {
           background: rgba(255, 255, 255, 0.92);
           border: 1px solid rgba(133, 145, 170, 0.22);
@@ -1178,6 +1184,33 @@ export default function Home() {
         }
         @media (max-width: 720px) {
           .verb-page { padding: 16px 12px 48px; }
+          .page-shell { gap: 14px; }
+          .mobile-exam-shortcut {
+            position: sticky;
+            top: 8px;
+            z-index: 30;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            align-items: center;
+            gap: 10px;
+            min-height: 50px;
+            border: 1px solid #172033;
+            border-radius: 8px;
+            background: rgba(23, 32, 51, 0.96);
+            color: #fff;
+            padding: 8px 12px;
+            text-decoration: none;
+            box-shadow: 0 8px 20px rgba(23, 32, 51, 0.2);
+            backdrop-filter: blur(10px);
+          }
+          .mobile-exam-shortcut span:first-child {
+            border-radius: 4px;
+            background: #d94734;
+            padding: 5px 7px;
+            font-size: 11px;
+            font-weight: 900;
+          }
+          .mobile-exam-shortcut strong { font-size: 14px; }
           .search-row, .verb-head, .practice-actions { flex-direction: column; align-items: stretch; }
           .summary-card, .section-block, .search-panel, .utility-panel { border-radius: 18px; padding: 16px; }
           .meta-grid, .filters, .category-grid, .rule-grid, .example-columns { grid-template-columns: 1fr; }
@@ -1185,14 +1218,86 @@ export default function Home() {
           .person-strip { grid-template-columns: repeat(6, 220px); }
           .verb-head h2 { font-size: 34px; }
           .favorite-button, .search-row button { width: 100%; }
-          .exam-intro, .exam-result-head, .exam-toolbar, .exam-footer { flex-direction: column; align-items: stretch; }
-          .exam-overview-grid, .exam-facts, .exam-tabs, .result-breakdown, .exam-options { grid-template-columns: 1fr; }
+          .a1-exam-panel {
+            scroll-margin-top: 72px;
+            gap: 16px;
+            border-top-width: 4px;
+            border-radius: 8px;
+            padding: 14px 12px calc(92px + env(safe-area-inset-bottom));
+          }
+          .exam-intro, .exam-result-head, .exam-toolbar, .exam-footer { flex-direction: column; align-items: stretch; gap: 14px; }
+          .exam-intro h2, .exam-toolbar h2, .exam-result-head h2 { font-size: 25px; line-height: 1.25; }
+          .exam-intro p:not(.eyebrow), .exam-result-head p:not(.eyebrow) { margin-top: 7px; font-size: 15px; line-height: 1.65; }
+          .exam-overview-grid { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 5px; }
+          .exam-overview-grid article { flex: 0 0 82%; min-height: 106px; scroll-snap-align: start; }
+          .exam-facts { grid-template-columns: repeat(2, 1fr); }
+          .exam-facts span { display: grid; place-content: center; min-height: 64px; padding: 9px; font-size: 12px; }
+          .result-breakdown, .exam-options { grid-template-columns: 1fr; }
           .exam-facts span + span { border-left: 0; border-top: 1px solid #dfe5ed; }
-          .exam-question-card { grid-template-columns: 1fr; padding: 14px; }
-          .exam-tabs { display: flex; overflow-x: auto; padding-bottom: 4px; }
-          .exam-tabs button { min-width: 130px; }
+          .exam-facts span:nth-child(2), .exam-facts span:nth-child(4) { border-left: 1px solid #dfe5ed; }
+          .exam-facts span:nth-child(2) { border-top: 0; }
+          .exam-toolbar { gap: 6px; }
+          .exam-progress-copy { font-size: 13px; }
+          .exam-progress-track { height: 6px; }
+          .exam-tabs {
+            position: sticky;
+            top: 66px;
+            z-index: 20;
+            display: flex;
+            overflow-x: auto;
+            gap: 6px;
+            margin: 0 -12px;
+            padding: 9px 12px;
+            background: rgba(255, 255, 255, 0.96);
+            border-top: 1px solid #e3e8ef;
+            border-bottom: 1px solid #e3e8ef;
+            scrollbar-width: none;
+            backdrop-filter: blur(10px);
+          }
+          .exam-tabs::-webkit-scrollbar, .exam-overview-grid::-webkit-scrollbar { display: none; }
+          .exam-tabs button { flex: 0 0 auto; min-width: 112px; min-height: 44px; padding: 0 10px; font-size: 13px; }
+          .exam-tabs button span { width: 22px; height: 22px; margin-right: 5px; }
+          .exam-section-head { align-items: flex-start; padding: 12px 0; }
+          .exam-section-head h3 { font-size: 21px; }
+          .exam-section-head p { font-size: 13px; line-height: 1.5; }
+          .exam-question-list { gap: 12px; }
+          .exam-question-card { grid-template-columns: 32px minmax(0, 1fr); gap: 10px; padding: 13px 12px; }
+          .question-number { width: 30px; height: 30px; font-size: 13px; }
+          .question-task { margin-top: 4px; font-size: 11px; }
+          .question-content h4 { margin: 12px 0; font-size: 17px; }
+          .reading-passage, .audio-transcript { padding: 12px; font-size: 15px; line-height: 1.65; }
+          .exam-options { gap: 7px; }
+          .exam-options label { min-height: 56px; padding: 11px 12px; font-size: 15px; line-height: 1.45; }
+          .exam-options input, .self-checklist input { width: 19px; height: 19px; flex: 0 0 auto; }
+          .listening-controls, .speaking-tools { display: grid; grid-template-columns: 1fr; }
+          .listen-button, .outline-command { width: 100%; min-height: 46px; }
+          .question-content textarea { min-height: 180px; font-size: 16px; }
+          .self-checklist label { align-items: center; min-height: 44px; line-height: 1.5; }
+          .exam-footer {
+            position: sticky;
+            bottom: 0;
+            z-index: 21;
+            margin: 0 -12px calc(-92px - env(safe-area-inset-bottom));
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+            background: rgba(255, 255, 255, 0.97);
+            border-top: 1px solid #d8dfe9;
+            box-shadow: 0 -8px 22px rgba(23, 32, 51, 0.1);
+            backdrop-filter: blur(10px);
+          }
+          .exam-footer span { display: none; }
+          .exam-notice { margin-bottom: 3px; font-size: 13px; }
           .exam-primary { width: 100%; }
           .score-ring { align-self: center; }
+          .answer-review article { padding: 11px 12px; }
+        }
+        @media (max-width: 360px) {
+          .a1-exam-panel { padding-left: 10px; padding-right: 10px; }
+          .exam-intro h2, .exam-toolbar h2, .exam-result-head h2 { font-size: 23px; }
+          .exam-overview-grid article { flex-basis: 88%; }
+          .exam-question-card { grid-template-columns: 1fr; }
+          .question-number { margin-bottom: 2px; }
+          .exam-tabs { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
+          .exam-footer { margin-left: -10px; margin-right: -10px; padding-left: 10px; padding-right: 10px; }
         }
       `}</style>
     </>
