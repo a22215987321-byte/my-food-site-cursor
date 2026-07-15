@@ -1,449 +1,725 @@
-import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import ChatRoom from '../components/ChatRoom';
-import { shouldSkipSplash } from '../lib/communityIntro';
-import { auth, db, googleProvider, signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from '../lib/firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import Head from "next/head";
+import { useEffect, useMemo, useState } from "react";
+import {
+  PERSONS,
+  TENSES,
+  VERB_TYPES,
+  conjugationTables,
+  findVerb,
+  getExample,
+  getVerbList,
+  suggestVerbs,
+  teachingExamples,
+  verbMetadata,
+} from "../lib/spanishVerbConjugationData";
 
-const AVATAR_EMOJIS = ["😊","👨‍💻","📚","🏃","🎮","🎨","🍜","🌸","🦊","🐼","🎧","⚡"];
-const COLORS = ["#3b82f6","#8b5cf6","#ec4899","#f59e0b","#10b981","#ef4444","#06b6d4","#84cc16"];
+const CEFR_LEVELS = ["全部", "A1", "A2", "B1"];
+const FREQUENCY_LEVELS = ["全部", "5", "4", "3"];
+const REGULARITY_LEVELS = ["全部", "規則動詞", "不規則動詞", "詞幹變化動詞"];
+const PRACTICE_TYPES = [
+  "看中文選正確變位",
+  "看人稱填寫變位",
+  "選擇正確時態",
+  "不規則動詞測驗",
+  "錯題重練",
+];
 
-function SplashScreen({ onEnter }) {
-  const hintRef = useRef(null);
-  const textColRef = useRef(null);
-  const [offset, setOffset] = useState(0);
-  const [visible, setVisible] = useState(false);
+function speak(text) {
+  if (typeof window === "undefined" || !window.speechSynthesis || !text || text === "-") return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "es-ES";
+  utterance.rate = 0.86;
+  window.speechSynthesis.speak(utterance);
+}
 
-  useEffect(() => {
-    const go = (e) => {
-      if (e.type === 'contextmenu') e.preventDefault();
-      onEnter();
-    };
-    document.addEventListener('click', go);
-    document.addEventListener('keydown', go);
-    document.addEventListener('contextmenu', go);
-    return () => {
-      document.removeEventListener('click', go);
-      document.removeEventListener('keydown', go);
-      document.removeEventListener('contextmenu', go);
-    };
-  }, [onEnter]);
-
-  useEffect(() => {
-    const align = () => {
-      if (!hintRef.current || !textColRef.current) return;
-      const hintLeft = hintRef.current.getBoundingClientRect().left;
-      const textLeft = textColRef.current.getBoundingClientRect().left;
-      setOffset(hintLeft - textLeft);
-      setVisible(true);
-    };
-    document.fonts.ready.then(align);
-    window.addEventListener('resize', align);
-    return () => window.removeEventListener('resize', align);
-  }, []);
-
+function PillButton({ active, children, onClick }) {
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', cursor: 'pointer' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        @font-face {
-          font-family: 'Cubic11';
-          src: url('https://cdn.jsdelivr.net/gh/ACh-K/Cubic-11@main/fonts/web/Cubic_11.woff2') format('woff2');
-          font-display: swap;
-        }
-        @keyframes pxblink { 0%,49%{opacity:1} 50%,100%{opacity:0.15} }
-        @keyframes pxfloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-        @keyframes pxfadein { from{opacity:0;transform:scale(0.97)} to{opacity:1;transform:scale(1)} }
-        .splash-wrap {
-          width: 100%;
-          height: 100vh;
-          position: relative;
-          overflow: hidden;
-          background: #0a0f1e;
-          font-family: 'Press Start 2P', monospace;
-          image-rendering: pixelated;
-          animation: pxfadein 0.6s ease both;
-        }
-        .sp-glow-a { position:absolute; top:-22%; left:10%; width:43%; aspect-ratio:1; border-radius:50%;
-          background:radial-gradient(circle,rgba(99,102,241,0.28),transparent 70%); }
-        .sp-glow-b { position:absolute; bottom:-29%; right:-6%; width:43%; aspect-ratio:1; border-radius:50%;
-          background:radial-gradient(circle,rgba(34,211,238,0.16),transparent 70%); }
-        .sp-frame { position:absolute; inset:20px; border:6px solid #6366f1;
-          box-shadow:0 0 0 6px #0a0f1e, 0 0 0 12px #312e81; pointer-events:none; }
-        .sp-scanlines { position:absolute; inset:0; pointer-events:none;
-          background:repeating-linear-gradient(0deg,rgba(0,0,0,0.22) 0,rgba(0,0,0,0.22) 2px,transparent 2px,transparent 4px); }
-        .sp-content { position:absolute; inset:20px; display:flex; align-items:center; justify-content:center; }
-        .sp-inner { display:flex; align-items:center; gap:5%; }
-        .sp-bubble { flex:0 0 auto; animation:pxfloat 4s ease-in-out infinite; }
-        .sp-bubble svg { filter:drop-shadow(0 0 14px rgba(99,102,241,0.8)); width:min(208px,18vw); height:auto; }
-        .sp-text { display:flex; flex-direction:column; gap:3.8%; }
-        .sp-tag { display:inline-flex; align-items:center; gap:1.9%; align-self:flex-start; margin-bottom:2%; }
-        .sp-arrow { font-size:clamp(9px,1.17vw,14px); color:#22d3ee; animation:pxblink 1.5s steps(1) infinite; }
-        .sp-label { font-size:clamp(9px,1.17vw,14px); color:#a5b4fc; letter-spacing:0.28em; }
-        .sp-title { display:flex; flex-direction:column; gap:2.2%; margin-bottom:3%; }
-        .sp-h1 { font-size:clamp(28px,5.67vw,68px); line-height:1; letter-spacing:0.03em; }
-        .sp-l1 { color:#ffffff; text-shadow:0 0 18px rgba(139,92,246,0.9),5px 5px 0 #4c1d95; }
-        .sp-l2 { color:#8b5cf6; text-shadow:0 0 18px rgba(34,211,238,0.5),5px 5px 0 #1e293b; }
-        .sp-sub { font-family:'Cubic11','Noto Sans TC',sans-serif; font-weight:400;
-          font-size:clamp(14px,2.33vw,28px); color:#94a3b8; letter-spacing:0.14em; }
-        .sp-hint { position:absolute; bottom:8.25%; left:50%; transform:translateX(-50%);
-          font-size:clamp(7px,0.83vw,10px); color:#8b5cf6; letter-spacing:0.4em;
-          text-shadow:0 0 10px rgba(139,92,246,0.85),0 0 2px rgba(167,139,250,0.9);
-          animation:pxblink 1.5s steps(1) infinite; white-space:nowrap; }
-      `}</style>
-      <div className="splash-wrap">
-        <div className="sp-glow-a" />
-        <div className="sp-glow-b" />
-        <div className="sp-frame" />
-        <div className="sp-scanlines" />
-        <div className="sp-content">
-          <div className="sp-inner" style={{ transform: `translateX(${offset}px)`, visibility: visible ? 'visible' : 'hidden' }}>
-            <div className="sp-bubble">
-              <svg viewBox="0 0 18 16" shape-rendering="crispEdges">
-                <rect x="1" y="0" width="16" height="1" fill="#22d3ee"/>
-                <rect x="0" y="1" width="1" height="10" fill="#22d3ee"/>
-                <rect x="17" y="1" width="1" height="10" fill="#22d3ee"/>
-                <rect x="1" y="1" width="16" height="7" fill="#8b5cf6"/>
-                <rect x="1" y="8" width="16" height="3" fill="#6366f1"/>
-                <rect x="2" y="11" width="14" height="1" fill="#22d3ee"/>
-                <rect x="3" y="11" width="4" height="2" fill="#6366f1"/>
-                <rect x="3" y="13" width="2" height="1" fill="#6366f1"/>
-                <rect x="2" y="11" width="1" height="3" fill="#22d3ee"/>
-                <rect x="5" y="13" width="1" height="1" fill="#22d3ee"/>
-                <rect x="3" y="14" width="2" height="1" fill="#22d3ee"/>
-                <rect x="4" y="5" width="2" height="2" fill="#0a0f1e"/>
-                <rect x="8" y="5" width="2" height="2" fill="#0a0f1e"/>
-                <rect x="12" y="5" width="2" height="2" fill="#0a0f1e"/>
-              </svg>
-            </div>
-            <div className="sp-text" ref={textColRef}>
-              <div className="sp-tag">
-                <span className="sp-arrow">▶</span>
-                <span className="sp-label">PRESS START</span>
-              </div>
-              <div className="sp-title">
-                <h1 className="sp-h1 sp-l1">EVON</h1>
-                <h1 className="sp-h1 sp-l2">VCHAT</h1>
-              </div>
-              <span className="sp-sub">即時聊天・好友・群組・直播</span>
-            </div>
-          </div>
-        </div>
-        <div className="sp-hint" ref={hintRef}>CLICK OR PRESS ANY KEY TO CONTINUE</div>
-      </div>
-    </div>
+    <button type="button" className={`pill-button${active ? " active" : ""}`} onClick={onClick}>
+      {children}
+    </button>
   );
 }
 
-function getErrorMessage(code) {
-  switch (code) {
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-    case 'auth/invalid-credential': return '帳號或密碼錯誤';
-    case 'auth/email-already-in-use': return '此電子郵件已被使用';
-    case 'auth/invalid-email': return '電子郵件格式不正確';
-    case 'auth/weak-password': return '密碼至少需要6位';
-    default: return '發生錯誤，請稍後再試';
-  }
+function AudioButton({ text, label = "播放發音" }) {
+  return (
+    <button type="button" className="audio-button" onClick={() => speak(text)} aria-label={label} title={label}>
+      ▶
+    </button>
+  );
+}
+
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <label className="filter-control">
+      <span>{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function VerbSummary({ verb, isFavorite, onToggleFavorite }) {
+  return (
+    <section className="summary-card">
+      <div>
+        <p className="eyebrow">Spanish Verb Conjugation</p>
+        <h1>西班牙語動詞變位表</h1>
+        <p className="hero-copy">
+          專為中文零基礎學習者設計：先看意思，再看人稱與時態，最後用例句把變位放進真實語境。
+        </p>
+      </div>
+      <div className="verb-head">
+        <div>
+          <div className="verb-title-row">
+            <h2>{verb.infinitive}</h2>
+            <AudioButton text={verb.infinitive} label={`播放 ${verb.infinitive} 發音`} />
+          </div>
+          <p>{verb.zh} · {verb.en}</p>
+        </div>
+        <button type="button" className={`favorite-button${isFavorite ? " saved" : ""}`} onClick={onToggleFavorite}>
+          {isFavorite ? "已收藏" : "收藏"}
+        </button>
+      </div>
+      <div className="meta-grid">
+        <span><strong>類型</strong>{verb.regularity}</span>
+        <span><strong>助動詞</strong>{verb.auxiliary}</span>
+        <span><strong>過去分詞</strong>{verb.participle}</span>
+        <span><strong>現在分詞</strong>{verb.gerund}</span>
+        <span><strong>CEFR</strong>{verb.cefr}</span>
+        <span><strong>常用程度</strong>{"★".repeat(verb.frequency)}{"☆".repeat(5 - verb.frequency)}</span>
+      </div>
+    </section>
+  );
+}
+
+function ConjugationCards({ selectedVerbKey, tenseFilter }) {
+  const table = conjugationTables[selectedVerbKey];
+  const visibleTenses = TENSES.filter((tense) => tenseFilter === "全部" || tense.key === tenseFilter);
+
+  return (
+    <section className="section-block">
+      <div className="section-heading">
+        <p className="eyebrow">Conjugation</p>
+        <h2>完整變位卡片</h2>
+      </div>
+      <div className="tense-grid">
+        {visibleTenses.map((tense) => (
+          <article key={tense.key} className="tense-card">
+            <div className="tense-card-head">
+              <div>
+                <h3>{tense.zh}</h3>
+                <p>{tense.es}</p>
+              </div>
+              <span>{tense.hint}</span>
+            </div>
+            <div className="person-strip" role="list">
+              {PERSONS.map((person, index) => {
+                const form = table[tense.key][index];
+                const example = getExample(selectedVerbKey, tense.key, person.key, form);
+                return (
+                  <div key={person.key} className="person-card" role="listitem">
+                    <div className="person-top">
+                      <div>
+                        <strong>{person.label}</strong>
+                        <small>{person.zh}</small>
+                      </div>
+                      <AudioButton text={form} label={`播放 ${form} 發音`} />
+                    </div>
+                    <div className="conjugated">{form}</div>
+                    <div className="region-tag">{person.region}</div>
+                    <p className="example-es">{example.es}</p>
+                    <p className="example-zh">{example.zh}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CategoryExplorer({ verbs, onSelectVerb }) {
+  return (
+    <section className="section-block">
+      <div className="section-heading">
+        <p className="eyebrow">Verb Library</p>
+        <h2>常用動詞分類</h2>
+      </div>
+      <div className="category-grid">
+        {VERB_TYPES.map((type) => {
+          const matched = verbs.filter((verb) => verb.categories.includes(type));
+          return (
+            <article key={type} className="category-card">
+              <h3>{type}</h3>
+              <div className="verb-chip-list">
+                {matched.length ? matched.map((verb) => (
+                  <button key={verb.infinitive} type="button" onClick={() => onSelectVerb(verb.infinitive)}>
+                    {verb.infinitive}
+                  </button>
+                )) : <span>準備擴充更多資料</span>}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function TeachingSection({ onSelectVerb }) {
+  const rules = [
+    ["判斷詞尾", "原形最後兩個字母是 -ar、-er 或 -ir，例如 hablar、comer、vivir。"],
+    ["刪除詞尾", "先拿掉 -ar / -er / -ir，留下詞幹：habl-、com-、viv-。"],
+    ["加入人稱詞尾", "依照時態與人稱加上不同詞尾，例如 hablo、comes、vivimos。"],
+    ["詞幹變化動詞", "部分動詞在某些人稱會改詞幹，例如 pensar → pienso。"],
+    ["第一人稱不規則", "有些動詞只有 yo 特別，例如 hacer → hago、tener → tengo。"],
+    ["完全不規則", "ser、ir 的多數時態不能只靠詞尾推導，需要整組記憶。"],
+    ["拼字變化", "為了保留發音，c / g / z 等字母有時會改拼法，例如 buscar → busqué。"],
+  ];
+
+  return (
+    <section className="section-block">
+      <div className="section-heading">
+        <p className="eyebrow">Beginner Guide</p>
+        <h2>變位規則教學</h2>
+      </div>
+      <div className="rule-grid">
+        {rules.map(([title, body]) => (
+          <article key={title} className="rule-card">
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </article>
+        ))}
+      </div>
+      <div className="example-columns">
+        <article>
+          <h3>規則動詞完整示例</h3>
+          <div className="verb-chip-list">
+            {teachingExamples.regular.map((verb) => (
+              <button key={verb} type="button" onClick={() => onSelectVerb(verb)}>{verb}</button>
+            ))}
+          </div>
+          <p>這三個動詞分別代表 -ar、-er、-ir，可以用來理解最基本的變位框架。</p>
+        </article>
+        <article>
+          <h3>不規則動詞完整示例</h3>
+          <div className="verb-chip-list">
+            {teachingExamples.irregular.map((verb) => (
+              <button key={verb} type="button" onClick={() => onSelectVerb(verb)}>{verb}</button>
+            ))}
+          </div>
+          <p>ser、estar、tener、ir、hacer 是 A1 最核心的不規則動詞，建議優先收藏與練習。</p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function PracticeMode({ selectedVerbKey, wrongItems, setWrongItems }) {
+  const [mode, setMode] = useState(PRACTICE_TYPES[0]);
+  const [answer, setAnswer] = useState("");
+  const [result, setResult] = useState("");
+  const practice = useMemo(() => {
+    if (mode === "錯題重練" && wrongItems.length) return wrongItems[0];
+    const verbKey = mode === "不規則動詞測驗" ? "tener" : selectedVerbKey;
+    const tense = mode === "選擇正確時態" ? "futuro" : "presente";
+    const personIndex = mode === "看人稱填寫變位" ? 1 : 0;
+    return {
+      verbKey,
+      tense,
+      personIndex,
+      answer: conjugationTables[verbKey][tense][personIndex],
+    };
+  }, [mode, selectedVerbKey, wrongItems]);
+
+  const person = PERSONS[practice.personIndex];
+  const verb = verbMetadata[practice.verbKey];
+  const tense = TENSES.find((item) => item.key === practice.tense);
+  const options = useMemo(() => {
+    const base = [practice.answer, conjugationTables[practice.verbKey].presente[2], conjugationTables[practice.verbKey].futuro[0]];
+    return [...new Set(base)].slice(0, 3);
+  }, [practice]);
+
+  const checkAnswer = (value) => {
+    const submitted = (value || answer).trim().toLowerCase();
+    const expected = practice.answer.toLowerCase();
+    if (submitted === expected) {
+      setResult("答對了！這個變位可以放心放進長期記憶。");
+      if (mode === "錯題重練") setWrongItems((items) => items.slice(1));
+    } else {
+      setResult(`再看一次：正確答案是 ${practice.answer}`);
+      setWrongItems((items) => [{ ...practice }, ...items].slice(0, 8));
+    }
+    setAnswer("");
+  };
+
+  return (
+    <section className="section-block practice-panel">
+      <div className="section-heading">
+        <p className="eyebrow">Practice</p>
+        <h2>練習模式</h2>
+      </div>
+      <div className="mode-tabs">
+        {PRACTICE_TYPES.map((type) => (
+          <PillButton key={type} active={mode === type} onClick={() => { setMode(type); setResult(""); }}>
+            {type}
+          </PillButton>
+        ))}
+      </div>
+      <div className="practice-card">
+        <div>
+          <p className="eyebrow">{verb.infinitive} · {tense.zh}</p>
+          <h3>{person.label}（{person.zh}）</h3>
+          <p>{mode === "看中文選正確變位" ? `${verb.zh}，${person.zh} 的現在時是哪一個？` : "請輸入或選擇正確變位。"}</p>
+        </div>
+        <div className="practice-actions">
+          {mode === "看人稱填寫變位" ? (
+            <>
+              <input value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="輸入變位，例如 eres" />
+              <button type="button" onClick={() => checkAnswer()}>檢查</button>
+            </>
+          ) : (
+            options.map((option) => (
+              <button key={option} type="button" onClick={() => checkAnswer(option)}>{option}</button>
+            ))
+          )}
+        </div>
+        {result && <div className="practice-result">{result}</div>}
+        <div className="wrong-count">錯題本：{wrongItems.length} 題</div>
+      </div>
+    </section>
+  );
 }
 
 export default function Home() {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [step, setStep] = useState('loading'); // loading | login | setup | chat
-
-  // Login / Register form state
-  const [tab, setTab] = useState('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [avatar, setAvatar] = useState('😊');
-  const [color, setColor] = useState('#3b82f6');
-  const [authError, setAuthError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  // First-time setup state (for Google users)
-  const [setupNickname, setSetupNickname] = useState('');
-  const [setupAvatar, setSetupAvatar] = useState('😊');
-  const [setupColor, setSetupColor] = useState('#3b82f6');
+  const allVerbs = useMemo(() => getVerbList(), []);
+  const [query, setQuery] = useState("ser");
+  const [selectedVerbKey, setSelectedVerbKey] = useState("ser");
+  const [searchError, setSearchError] = useState("");
+  const [tenseFilter, setTenseFilter] = useState("全部");
+  const [typeFilter, setTypeFilter] = useState("全部");
+  const [cefrFilter, setCefrFilter] = useState("全部");
+  const [frequencyFilter, setFrequencyFilter] = useState("全部");
+  const [regularityFilter, setRegularityFilter] = useState("全部");
+  const [favorites, setFavorites] = useState([]);
+  const [recent, setRecent] = useState([]);
+  const [wrongItems, setWrongItems] = useState([]);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (u) => {
-      if (!u) { setUser(null); setStep('login'); return; }
-      setUser(u);
-      const snap = await getDoc(doc(db, 'users', u.uid));
-      if (snap.exists()) {
-        setStep(shouldSkipSplash() ? 'chat' : 'splash');
-      } else {
-        setSetupNickname(u.displayName || '');
-        setStep('setup');
-      }
-    });
-    return unsub;
+    setFavorites(JSON.parse(localStorage.getItem("spanishVerbFavorites") || "[]"));
+    setRecent(JSON.parse(localStorage.getItem("spanishVerbRecent") || "[]"));
   }, []);
 
-  const handleLogin = async () => {
-    setAuthError('');
-    if (!email.trim() || !password) return setAuthError('請填寫所有欄位');
-    setBusy(true);
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-    } catch (e) { setAuthError(getErrorMessage(e.code)); }
-    finally { setBusy(false); }
+  useEffect(() => {
+    localStorage.setItem("spanishVerbFavorites", JSON.stringify(favorites));
+  }, [favorites]);
+
+  useEffect(() => {
+    localStorage.setItem("spanishVerbRecent", JSON.stringify(recent));
+  }, [recent]);
+
+  const selectedVerb = verbMetadata[selectedVerbKey];
+  const filteredVerbs = allVerbs.filter((verb) => {
+    const typeOk = typeFilter === "全部" || verb.categories.includes(typeFilter);
+    const cefrOk = cefrFilter === "全部" || verb.cefr === cefrFilter;
+    const frequencyOk = frequencyFilter === "全部" || String(verb.frequency) === frequencyFilter;
+    const regularityOk = regularityFilter === "全部" || verb.regularity === regularityFilter;
+    return typeOk && cefrOk && frequencyOk && regularityOk;
+  });
+
+  const selectVerb = (verbKey) => {
+    setSelectedVerbKey(verbKey);
+    setQuery(verbKey);
+    setSearchError("");
+    setRecent((items) => [verbKey, ...items.filter((item) => item !== verbKey)].slice(0, 8));
   };
 
-  const handleRegister = async () => {
-    setAuthError('');
-    if (!email.trim() || !password || !nickname.trim()) return setAuthError('請填寫所有欄位');
-    if (password.length < 6) return setAuthError('密碼至少需要6位');
-    setBusy(true);
-    try {
-      const { user: u } = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      await setDoc(doc(db, 'users', u.uid), {
-        nickname: nickname.trim(), avatar, color,
-        bio: '', status: 'online', statusText: '',
-        email: email.trim(), friends: [], pendingIn: [], pendingOut: [],
-        avatarImage: '/avatar1.png',
-        createdAt: serverTimestamp(),
-      });
-      setStep('splash');
-    } catch (e) { setAuthError(getErrorMessage(e.code)); }
-    finally { setBusy(false); }
-  };
-
-  const handleGoogleLogin = async () => {
-    setAuthError('');
-    try { await signInWithPopup(auth, googleProvider); }
-    catch (e) {
-      console.error('[auth] Google login failed:', e);
-      setAuthError(`Google 登入失敗：${e?.code || '請稍後再試'}`);
+  const handleSearch = (event) => {
+    event.preventDefault();
+    const found = findVerb(query);
+    if (found) {
+      selectVerb(found);
+    } else {
+      setSearchError(query.trim());
     }
   };
 
-  const handleSetup = async () => {
-    if (!setupNickname.trim() || !user) return;
-    setBusy(true);
-    try {
-      await setDoc(doc(db, 'users', user.uid), {
-        nickname: setupNickname.trim(), avatar: setupAvatar, color: setupColor,
-        bio: '', status: 'online', statusText: '',
-        email: user.email || '', friends: [], pendingIn: [], pendingOut: [],
-        avatarImage: '/avatar1.png',
-        createdAt: serverTimestamp(),
-      });
-      setStep('splash');
-    } catch (e) { console.error(e); }
-    finally { setBusy(false); }
+  const toggleFavorite = () => {
+    setFavorites((items) => (
+      items.includes(selectedVerbKey)
+        ? items.filter((item) => item !== selectedVerbKey)
+        : [selectedVerbKey, ...items]
+    ));
   };
 
-  const inputStyle = {
-    width: '100%', background: '#0f172a', border: '1px solid #334155',
-    borderRadius: 10, padding: '10px 14px', color: '#e2e8f0',
-    fontSize: 14, outline: 'none', boxSizing: 'border-box',
-  };
-
-  // ── Loading ──
-  if (step === 'loading') {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <style>{`
-          @keyframes evon-spin { to { transform: rotate(360deg); } }
-          .evon-spinner {
-            width: 48px; height: 48px; border-radius: 50%;
-            border: 4px solid #1e293b;
-            border-top-color: #8b5cf6;
-            animation: evon-spin 0.8s linear infinite;
-          }
-        `}</style>
-        <div className="evon-spinner" />
-        <div style={{ color: '#475569', fontSize: 14, letterSpacing: 1 }}>載入中...</div>
-      </div>
-    );
-  }
-
-  // ── Splash ──
-  if (step === 'splash') {
-    return <SplashScreen onEnter={() => router.push('/community')} />;
-  }
-
-  // ── Chat ──
-  if (step === 'chat') return <ChatRoom user={user} />;
-
-  // ── First-time profile setup (Google users) ──
-  if (step === 'setup') {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-        <div style={{ width: '100%', maxWidth: 420 }}>
-          <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>👋</div>
-            <h1 style={{ color: '#e2e8f0', fontSize: 22, fontWeight: 700, margin: 0 }}>建立你的個人資料</h1>
-            <p style={{ color: '#64748b', fontSize: 14, marginTop: 6 }}>讓大家認識你</p>
-          </div>
-          <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, border: '1px solid #334155' }}>
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 6, display: 'block' }}>選擇頭像</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                {AVATAR_EMOJIS.map(e => (
-                  <button key={e} onClick={() => setSetupAvatar(e)} style={{ width: 38, height: 38, borderRadius: '50%', border: setupAvatar === e ? '2px solid #8b5cf6' : '2px solid transparent', background: setupColor, cursor: 'pointer', fontSize: 18 }}>{e}</button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {COLORS.map(c => (
-                  <button key={c} onClick={() => setSetupColor(c)} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: setupColor === c ? '2px solid #fff' : '2px solid transparent', cursor: 'pointer' }} />
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>暱稱</label>
-              <input value={setupNickname} onChange={e => setSetupNickname(e.target.value)}
-                placeholder="你的暱稱" onKeyDown={e => e.key === 'Enter' && handleSetup()}
-                style={inputStyle} />
-            </div>
-            <button onClick={handleSetup} disabled={busy || !setupNickname.trim()} style={{
-              width: '100%', background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)',
-              border: 'none', borderRadius: 10, padding: '12px', color: '#fff',
-              fontSize: 15, fontWeight: 700, cursor: 'pointer', opacity: (busy || !setupNickname.trim()) ? 0.6 : 1,
-            }}>
-              {busy ? '儲存中...' : '進入聊天室'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Login / Register ──
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0f1e', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ width: '100%', maxWidth: 400 }}>
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 64, height: 64, margin: '0 auto 16px', borderRadius: 18,
-            background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
-            boxShadow: '0 8px 24px rgba(139,92,246,0.35)',
-          }}>💬</div>
-          <h1 style={{
-            fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: 0.3,
-            background: 'linear-gradient(135deg,#c4b5fd,#67e8f9)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-          }}>EvonVChat</h1>
-          <p style={{ color: '#94a3b8', fontSize: 15, marginTop: 8, lineHeight: 1.5 }}>即時聊天平台 — 大廳、好友、群組，免費開始</p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {['公共大廳即時聊天，認識新朋友', '好友私訊、群組、動態消息', '站上還有 AI 夥伴與每日內容可互動'].map(line => (
-              <li key={line} style={{ color: '#64748b', fontSize: 13 }}>· {line}</li>
-            ))}
-          </ul>
-          <Link href="/ai-prompt-enhancer" style={{
-            display: 'block', marginTop: 22, padding: '18px 20px', borderRadius: 16, textDecoration: 'none',
-            background: 'linear-gradient(135deg, rgba(124,92,255,0.18), rgba(59,130,246,0.1))',
-            border: '1px solid rgba(124,92,255,0.28)', boxShadow: '0 12px 32px rgba(124,92,255,0.15)',
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#c4b5fd', marginBottom: 8 }}>
-              Featured Tool / 主打工具
-            </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#f8faff', marginBottom: 4 }}>AI Prompt Enhancer</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#c4b5fd', marginBottom: 10 }}>AI 提示詞優化器</div>
-            <div style={{ fontSize: 13, lineHeight: 1.6, color: '#cbd5e1', marginBottom: 6 }}>
-              Turn rough ideas into ready-to-use prompts for AI image and video tools.
-            </div>
-            <div style={{ fontSize: 13, lineHeight: 1.65, color: '#94a3b8', marginBottom: 10 }}>
-              把簡單想法變成可直接用於 AI 圖片 / AI 影片工具的提示詞。
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#67e8f9' }}>Try It / 立即試用 →</div>
-          </Link>
-        </div>
-        <div style={{ background: '#1e293b', borderRadius: 16, padding: 28, border: '1px solid #334155' }}>
-          {/* Tab switch */}
-          <div style={{ display: 'flex', marginBottom: 20, background: '#0f172a', borderRadius: 10, padding: 4 }}>
-            {['login','register'].map(t => (
-              <button key={t} onClick={() => { setTab(t); setAuthError(''); }} style={{
-                flex: 1, padding: '8px 0', border: 'none', borderRadius: 8, cursor: 'pointer',
-                background: tab === t ? 'linear-gradient(135deg,#8b5cf6,#22d3ee)' : 'transparent',
-                color: tab === t ? '#fff' : '#64748b', fontSize: 14, fontWeight: 600,
-              }}>{t === 'login' ? '登入' : '註冊'}</button>
-            ))}
-          </div>
-
-          {/* Avatar picker (register only) */}
-          {tab === 'register' && (
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 6, display: 'block' }}>選擇頭像</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                {AVATAR_EMOJIS.map(e => (
-                  <button key={e} onClick={() => setAvatar(e)} style={{ width: 38, height: 38, borderRadius: '50%', border: avatar === e ? '2px solid #8b5cf6' : '2px solid transparent', background: color, cursor: 'pointer', fontSize: 18 }}>{e}</button>
-                ))}
-              </div>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {COLORS.map(c => (
-                  <button key={c} onClick={() => setColor(c)} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: color === c ? '2px solid #fff' : '2px solid transparent', cursor: 'pointer' }} />
-                ))}
+    <>
+      <Head>
+        <title>西班牙語動詞變位表 | Spanish Verb Conjugation</title>
+        <meta name="description" content="中文零基礎適用的西班牙語動詞變位表，含搜尋、篩選、收藏、最近搜尋與練習模式。" />
+      </Head>
+      <main className="verb-page">
+        <div className="page-shell">
+          <form className="search-panel" onSubmit={handleSearch}>
+            <div>
+              <label htmlFor="verb-search">搜尋西班牙語動詞</label>
+              <div className="search-row">
+                <input
+                  id="verb-search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="ser, estar, tener, hablar, comer, vivir, ir, hacer"
+                />
+                <button type="submit">搜尋</button>
               </div>
             </div>
-          )}
-
-          {tab === 'register' && (
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>暱稱</label>
-              <input value={nickname} onChange={e => setNickname(e.target.value)} placeholder="你的暱稱" style={inputStyle} />
+            <div className="quick-row">
+              {["ser", "estar", "tener", "hablar", "comer", "vivir", "ir", "hacer"].map((verb) => (
+                <button key={verb} type="button" onClick={() => selectVerb(verb)}>{verb}</button>
+              ))}
             </div>
-          )}
+            {searchError && (
+              <div className="not-found-card">
+                <h3>找不到「{searchError}」的完整資料</h3>
+                <p>可能是拼字、重音符號或輸入了變位形。你可以先回到常用動詞，或試試這些可能的原形。</p>
+                <div className="verb-chip-list">
+                  {suggestVerbs(searchError).map((verb) => (
+                    <button key={verb} type="button" onClick={() => selectVerb(verb)}>{verb}</button>
+                  ))}
+                  <button type="button" onClick={() => selectVerb("ser")}>返回常用動詞列表</button>
+                </div>
+              </div>
+            )}
+          </form>
 
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>電子郵件</label>
-            <input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="your@email.com" style={inputStyle} />
-          </div>
+          <VerbSummary
+            verb={selectedVerb}
+            isFavorite={favorites.includes(selectedVerbKey)}
+            onToggleFavorite={toggleFavorite}
+          />
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>密碼</label>
-            <input value={password} onChange={e => setPassword(e.target.value)} type="password" placeholder="••••••••"
-              onKeyDown={e => e.key === 'Enter' && (tab === 'login' ? handleLogin() : handleRegister())}
-              style={inputStyle} />
-          </div>
-
-          {authError && (
-            <div style={{ background: '#450a0a', border: '1px solid #ef4444', borderRadius: 8, padding: '8px 12px', color: '#fca5a5', fontSize: 13, marginBottom: 14 }}>
-              {authError}
+          <section className="utility-panel">
+            <div className="filters">
+              <FilterSelect label="按時態篩選" value={tenseFilter} onChange={setTenseFilter} options={["全部", ...TENSES.map((tense) => tense.key)]} />
+              <FilterSelect label="按動詞類型篩選" value={typeFilter} onChange={setTypeFilter} options={["全部", ...VERB_TYPES]} />
+              <FilterSelect label="按 CEFR 等級篩選" value={cefrFilter} onChange={setCefrFilter} options={CEFR_LEVELS} />
+              <FilterSelect label="按常用程度篩選" value={frequencyFilter} onChange={setFrequencyFilter} options={FREQUENCY_LEVELS} />
+              <FilterSelect label="按規則性篩選" value={regularityFilter} onChange={setRegularityFilter} options={REGULARITY_LEVELS} />
             </div>
-          )}
+            <div className="saved-panel">
+              <div>
+                <h3>收藏動詞</h3>
+                <div className="verb-chip-list">
+                  {favorites.length ? favorites.map((verb) => (
+                    <button key={verb} type="button" onClick={() => selectVerb(verb)}>{verb}</button>
+                  )) : <span>尚未收藏</span>}
+                </div>
+              </div>
+              <div>
+                <h3>最近搜尋</h3>
+                <div className="verb-chip-list">
+                  {recent.length ? recent.map((verb) => (
+                    <button key={verb} type="button" onClick={() => selectVerb(verb)}>{verb}</button>
+                  )) : <span>搜尋後會顯示在這裡</span>}
+                </div>
+              </div>
+            </div>
+          </section>
 
-          <button onClick={tab === 'login' ? handleLogin : handleRegister} disabled={busy} style={{
-            width: '100%', background: 'linear-gradient(135deg,#8b5cf6,#22d3ee)',
-            border: 'none', borderRadius: 10, padding: '12px', color: '#fff',
-            fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 14, opacity: busy ? 0.7 : 1,
-          }}>
-            {busy ? '處理中...' : (tab === 'login' ? '登入' : '建立帳號')}
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-            <div style={{ flex: 1, height: 1, background: '#334155' }} />
-            <span style={{ color: '#64748b', fontSize: 12 }}>或</span>
-            <div style={{ flex: 1, height: 1, background: '#334155' }} />
-          </div>
-
-          <button onClick={handleGoogleLogin} style={{
-            display: 'flex', alignItems: 'center', gap: 12, background: '#fff',
-            border: 'none', borderRadius: 12, padding: '12px 24px', cursor: 'pointer',
-            fontSize: 15, fontWeight: 600, color: '#1f2937', width: '100%',
-            justifyContent: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
-          }}>
-            <svg width="20" height="20" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            使用 Google 帳號登入
-          </button>
-
-          <div style={{ marginTop: 20, textAlign: 'center' }}>
-            <Link href="/community" style={{ color: '#8b5cf6', fontSize: 14, textDecoration: 'none', fontWeight: 600 }}>
-              了解 EvonVChat 社群功能 →
-            </Link>
-          </div>
+          <ConjugationCards selectedVerbKey={selectedVerbKey} tenseFilter={tenseFilter} />
+          <CategoryExplorer verbs={filteredVerbs} onSelectVerb={selectVerb} />
+          <TeachingSection onSelectVerb={selectVerb} />
+          <PracticeMode selectedVerbKey={selectedVerbKey} wrongItems={wrongItems} setWrongItems={setWrongItems} />
         </div>
-      </div>
-    </div>
+      </main>
+      <style jsx global>{`
+        * { box-sizing: border-box; }
+        body {
+          margin: 0;
+          background: #f6f7fb;
+          color: #172033;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "Noto Sans", Arial, sans-serif;
+        }
+        button, input, select { font: inherit; }
+        .verb-page {
+          min-height: 100vh;
+          background:
+            linear-gradient(135deg, rgba(124, 92, 255, 0.10), transparent 34%),
+            linear-gradient(225deg, rgba(17, 156, 180, 0.10), transparent 30%),
+            #f6f7fb;
+          padding: 32px 16px 72px;
+        }
+        .page-shell {
+          width: min(1180px, 100%);
+          margin: 0 auto;
+          display: grid;
+          gap: 22px;
+        }
+        .search-panel, .summary-card, .utility-panel, .section-block {
+          background: rgba(255, 255, 255, 0.92);
+          border: 1px solid rgba(133, 145, 170, 0.22);
+          border-radius: 24px;
+          box-shadow: 0 18px 50px rgba(31, 45, 70, 0.08);
+        }
+        .search-panel { padding: 22px; display: grid; gap: 16px; }
+        .search-panel label, .filter-control span {
+          display: block;
+          margin-bottom: 8px;
+          color: #58647a;
+          font-size: 14px;
+          font-weight: 700;
+        }
+        .search-row { display: flex; gap: 10px; }
+        .search-row input, .practice-actions input, .filter-control select {
+          width: 100%;
+          min-height: 48px;
+          border: 1px solid #d7deea;
+          border-radius: 14px;
+          background: #fff;
+          color: #172033;
+          padding: 0 14px;
+          outline: none;
+        }
+        .search-row input:focus, .practice-actions input:focus, .filter-control select:focus {
+          border-color: #7c5cff;
+          box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12);
+        }
+        .search-row button, .practice-actions button {
+          min-height: 48px;
+          border: 0;
+          border-radius: 14px;
+          padding: 0 22px;
+          background: #2f55d4;
+          color: #fff;
+          font-weight: 800;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .quick-row, .verb-chip-list, .mode-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .quick-row button, .verb-chip-list button, .pill-button {
+          border: 1px solid #dce3ef;
+          border-radius: 999px;
+          background: #fff;
+          color: #34415a;
+          min-height: 36px;
+          padding: 7px 13px;
+          cursor: pointer;
+          font-weight: 700;
+        }
+        .pill-button.active, .quick-row button:hover, .verb-chip-list button:hover {
+          border-color: #7c5cff;
+          background: #f1efff;
+          color: #4f35c7;
+        }
+        .not-found-card {
+          border-radius: 18px;
+          background: #fff7ed;
+          border: 1px solid #fed7aa;
+          padding: 16px;
+        }
+        .not-found-card h3 { margin: 0 0 6px; }
+        .not-found-card p { margin: 0 0 12px; color: #7c4a15; }
+        .summary-card {
+          padding: 28px;
+          display: grid;
+          gap: 24px;
+        }
+        .eyebrow {
+          margin: 0 0 8px;
+          color: #6a5cff;
+          font-size: 13px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+        h1 {
+          margin: 0;
+          font-size: clamp(34px, 6vw, 68px);
+          line-height: 1.05;
+          letter-spacing: 0;
+          color: #121a2c;
+        }
+        .hero-copy {
+          max-width: 740px;
+          margin: 16px 0 0;
+          color: #58647a;
+          font-size: 18px;
+          line-height: 1.7;
+        }
+        .verb-head {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 18px;
+          padding-top: 4px;
+          border-top: 1px solid #edf0f6;
+        }
+        .verb-title-row { display: flex; align-items: center; gap: 10px; }
+        .verb-head h2 { margin: 0; font-size: 42px; color: #2f55d4; }
+        .verb-head p { margin: 6px 0 0; color: #58647a; font-size: 17px; }
+        .audio-button {
+          width: 34px;
+          height: 34px;
+          border: 0;
+          border-radius: 50%;
+          background: #ecf4ff;
+          color: #2f55d4;
+          cursor: pointer;
+          font-size: 13px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .favorite-button {
+          min-height: 44px;
+          padding: 0 18px;
+          border-radius: 999px;
+          border: 1px solid #dce3ef;
+          background: #fff;
+          color: #2f55d4;
+          cursor: pointer;
+          font-weight: 800;
+        }
+        .favorite-button.saved { background: #2f55d4; color: #fff; border-color: #2f55d4; }
+        .meta-grid {
+          display: grid;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 10px;
+        }
+        .meta-grid span {
+          min-height: 74px;
+          border-radius: 16px;
+          background: #f7f9fd;
+          border: 1px solid #edf0f6;
+          padding: 12px;
+          color: #1d2a42;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          gap: 4px;
+        }
+        .meta-grid strong { color: #6c768a; font-size: 12px; }
+        .utility-panel { padding: 20px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; }
+        .filters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+        .saved-panel {
+          display: grid;
+          gap: 14px;
+          padding: 16px;
+          border-radius: 18px;
+          background: #f7f9fd;
+        }
+        .saved-panel h3 { margin: 0 0 8px; font-size: 16px; }
+        .section-block { padding: 24px; }
+        .section-heading { margin-bottom: 18px; }
+        .section-heading h2 { margin: 0; font-size: 30px; color: #121a2c; }
+        .tense-grid { display: grid; gap: 16px; }
+        .tense-card {
+          border: 1px solid #e5ebf4;
+          border-radius: 20px;
+          background: #fff;
+          overflow: hidden;
+        }
+        .tense-card-head {
+          display: grid;
+          grid-template-columns: 0.8fr 1.2fr;
+          gap: 16px;
+          padding: 18px;
+          background: #f8faff;
+          border-bottom: 1px solid #e5ebf4;
+        }
+        .tense-card-head h3 { margin: 0; font-size: 22px; }
+        .tense-card-head p, .tense-card-head span { margin: 4px 0 0; color: #647086; line-height: 1.55; }
+        .person-strip {
+          display: grid;
+          grid-template-columns: repeat(6, minmax(176px, 1fr));
+          gap: 12px;
+          padding: 16px;
+          overflow-x: auto;
+        }
+        .person-card {
+          min-width: 176px;
+          border-radius: 16px;
+          border: 1px solid #e8eef6;
+          background: #fff;
+          padding: 14px;
+        }
+        .person-top { display: flex; justify-content: space-between; gap: 8px; }
+        .person-top strong, .person-top small { display: block; }
+        .person-top small, .example-zh { color: #66728a; }
+        .conjugated {
+          margin: 12px 0 8px;
+          color: #2f55d4;
+          font-size: 24px;
+          font-weight: 900;
+          overflow-wrap: anywhere;
+        }
+        .region-tag {
+          display: inline-flex;
+          min-height: 28px;
+          align-items: center;
+          border-radius: 999px;
+          background: #edf8f6;
+          color: #157a6e;
+          padding: 4px 9px;
+          font-size: 12px;
+          font-weight: 800;
+        }
+        .example-es, .example-zh { margin: 10px 0 0; line-height: 1.55; font-size: 14px; }
+        .example-es { color: #26344f; font-weight: 700; }
+        .category-grid, .rule-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 12px;
+        }
+        .category-card, .rule-card, .example-columns article, .practice-card {
+          border: 1px solid #e5ebf4;
+          border-radius: 18px;
+          background: #fff;
+          padding: 16px;
+        }
+        .category-card h3, .rule-card h3, .example-columns h3, .practice-card h3 { margin: 0 0 10px; }
+        .rule-card p, .example-columns p, .practice-card p { margin: 0; color: #647086; line-height: 1.65; }
+        .example-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+        .practice-panel { display: grid; gap: 14px; }
+        .practice-card { display: grid; gap: 16px; }
+        .practice-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+        .practice-actions input { max-width: 320px; }
+        .practice-result {
+          border-radius: 14px;
+          background: #eef9f1;
+          color: #176b35;
+          padding: 12px;
+          font-weight: 800;
+        }
+        .wrong-count { color: #647086; font-size: 14px; }
+        @media (max-width: 1100px) {
+          .meta-grid { grid-template-columns: repeat(3, 1fr); }
+          .utility-panel { grid-template-columns: 1fr; }
+          .filters, .category-grid, .rule-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 720px) {
+          .verb-page { padding: 16px 12px 48px; }
+          .search-row, .verb-head, .practice-actions { flex-direction: column; align-items: stretch; }
+          .summary-card, .section-block, .search-panel, .utility-panel { border-radius: 18px; padding: 16px; }
+          .meta-grid, .filters, .category-grid, .rule-grid, .example-columns { grid-template-columns: 1fr; }
+          .tense-card-head { grid-template-columns: 1fr; }
+          .person-strip { grid-template-columns: repeat(6, 220px); }
+          .verb-head h2 { font-size: 34px; }
+          .favorite-button, .search-row button { width: 100%; }
+        }
+      `}</style>
+    </>
   );
 }

@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "typecheck": "tsc --noEmit",
     "test:finance": "node --test tests/financeSessionSchedule.test.mjs tests/financeRunLogger.test.mjs",
     "test:waitlist": "node --test tests/waitlist.test.mjs",
     "test:community": "node --test tests/waitlist.test.mjs tests/communityIntro.test.mjs"
@@ -23,8 +24,13 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
     "autoprefixer": "^10.5.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.5",
     "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.0"
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.5.4"
   }
 }
