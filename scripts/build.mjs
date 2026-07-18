@@ -8,9 +8,13 @@ const checkOnly = process.argv.includes("--check-only");
 
 const copyPlan = [
   ["content/index.html", "index.html"],
+  ["content/a1-vocabulary.html", "a1-vocabulary.html"],
   ["content/scene-gallery.html", "scene-gallery.html"],
   ["styles/ebook.css", "styles.css"],
+  ["styles/a1-vocabulary.css", "a1-vocabulary.css"],
   ["public/app.js", "app.js"],
+  ["public/a1-vocabulary.js", "a1-vocabulary.js"],
+  ["public/data", "data"],
   ["public/assets", "assets"],
   ["public/favicon.svg", "favicon.svg"],
   ["public/robots.txt", "robots.txt"],
@@ -41,11 +45,14 @@ const auditRoot = checkOnly ? root : dist;
 const auditFiles = checkOnly
   ? [
       "content/index.html",
+      "content/a1-vocabulary.html",
       "content/scene-gallery.html",
       "styles/ebook.css",
+      "styles/a1-vocabulary.css",
       "public/app.js",
+      "public/a1-vocabulary.js",
     ]
-  : ["index.html", "scene-gallery.html", "styles.css", "app.js"];
+  : ["index.html", "a1-vocabulary.html", "scene-gallery.html", "styles.css", "a1-vocabulary.css", "app.js", "a1-vocabulary.js"];
 
 const localPathPattern = /file:\/\/\/|\b[A-Za-z]:[\\/]|C:[\\/]Users[\\/]/i;
 const referencePattern = /(?:src|href)\s*=\s*["']([^"']+)["']|url\(\s*["']?([^"')]+)["']?\s*\)/gi;

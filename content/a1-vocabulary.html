@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>西班牙語A1核心詞彙｜繁體中文互動學習版</title>
+  <meta name="description" content="西班牙語A1核心詞彙繁體中文互動版，收錄 1,088 個詞彙與數字項目、完整 0–100、百與千、年份價格、課堂指令、職業場所及情緒感受。">
+  <meta name="theme-color" content="#17343b">
+  <link rel="canonical" href="https://www.evonvchat.com/a1-vocabulary">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="zh_HK">
+  <meta property="og:title" content="西班牙語A1核心詞彙">
+  <meta property="og:description" content="1,088 項完整 A1 核心範圍，依生活主題搜尋與閱讀。">
+  <meta property="og:url" content="https://www.evonvchat.com/a1-vocabulary">
+  <meta property="og:image" content="https://www.evonvchat.com/assets/cover-spanish-a1-v2.png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/a1-vocabulary.css">
+  <script defer src="/a1-vocabulary.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#library">跳到詞彙內容</a>
+
+  <header class="site-header">
+    <a class="site-brand" href="/a1-vocabulary" aria-label="西班牙語A1核心詞彙首頁">
+      <span class="brand-mark" aria-hidden="true">A1</span>
+      <span><strong>西班牙語A1核心詞彙</strong><small>繁體中文互動學習版</small></span>
+    </a>
+    <nav aria-label="網站導覽">
+      <a class="active" href="/a1-vocabulary" aria-current="page">核心詞彙</a>
+      <a href="/">旅行必學句子</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="book-title">
+      <div class="hero-copy">
+        <p class="eyebrow">VOCABULARIO ESENCIAL · CEFR A1</p>
+        <h1 id="book-title">西班牙語A1<br>核心詞彙</h1>
+        <p class="hero-lead">從名字、時間和食物，到課堂指令、職業場所與情緒感受。把初學真正需要的詞，整理成一本可以搜尋、可以隨身閱讀的網頁電子書。</p>
+        <div class="hero-stats" aria-label="本書收錄統計">
+          <div><strong id="itemCount">1,088</strong><span>詞彙／數字項目</span></div>
+          <div><strong id="chapterCount">15</strong><span>生活主題</span></div>
+          <div><strong>0–100＋</strong><span>百、千與年份</span></div>
+        </div>
+        <div class="hero-actions">
+          <a class="primary-action" href="#library">開始查詞</a>
+          <button class="secondary-action" id="startNumbers" type="button">從數字開始</button>
+        </div>
+        <p class="scope-note">CEFR 沒有全球唯一的固定字表；本書以 A1 常見溝通任務界定完整核心範圍，並補齊百、千、年份與價格所需數字。</p>
+      </div>
+      <figure class="hero-art">
+        <img src="/assets/cover-spanish-a1-v2.png" alt="溫暖的西班牙街景，桌上放着咖啡、筆記本，街旁有單車與橘子樹">
+        <figcaption>在生活場景中，記住真正會用到的詞。</figcaption>
+      </figure>
+    </section>
+
+    <section class="library" id="library" aria-label="互動詞彙書">
+      <aside class="chapter-panel" aria-label="章節導覽">
+        <div class="chapter-panel-heading">
+          <p>CONTENTS</p>
+          <h2>依主題學習</h2>
+          <span>每次只讀一章，搜尋時則查遍全書。</span>
+        </div>
+        <label class="chapter-select-label" for="chapterSelect">選擇章節</label>
+        <select id="chapterSelect" class="chapter-select" aria-label="選擇章節"></select>
+        <nav class="chapter-nav" id="chapterNav" aria-label="詞彙章節"></nav>
+      </aside>
+
+      <section class="reader" aria-label="詞彙內容">
+        <div class="reader-toolbar">
+          <label class="search-box" for="vocabularySearch">
+            <span>搜尋西文或中文</span>
+            <input id="vocabularySearch" type="search" autocomplete="off" placeholder="例如：médico、醫院、害怕、二十……">
+          </label>
+          <div class="view-switch" role="group" aria-label="顯示方式">
+            <button class="active" type="button" data-view="cards" aria-pressed="true">卡片</button>
+            <button type="button" data-view="list" aria-pressed="false">清單</button>
+          </div>
+        </div>
+        <p class="search-status" id="searchStatus" role="status" aria-live="polite"></p>
+        <div id="chapterContent" aria-busy="true">
+          <div class="loading-panel">
+            <strong>正在載入完整詞彙書</strong>
+            <span>整理 1,088 項內容中……</span>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <button class="top-button" id="topButton" type="button" aria-label="回到頁首">回到頁首</button>
+
+  <footer class="site-footer">
+    <p><strong>西班牙語A1核心詞彙</strong><span>繁體中文互動學習版 · 2026</span></p>
+    <p>內容以日常溝通與初階聽讀需求編排。</p>
+  </footer>
+
+  <noscript><p class="noscript">此網頁詞彙書需要 JavaScript 才能載入章節與搜尋內容。</p></noscript>
+</body>
+</html>

@@ -7,6 +7,7 @@
     "build": "node scripts/build.mjs",
     "dev": "npm run build && node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
-    "test": "npm run build && node scripts/smoke-app.mjs"
+    "test": "npm run build && node scripts/smoke-app.mjs && npm run test:a1-vocabulary",
+    "test:a1-vocabulary": "node scripts/smoke-a1-vocabulary.mjs"
   }
 }
