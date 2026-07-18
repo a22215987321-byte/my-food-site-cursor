@@ -1,30 +1,12 @@
 {
-  "name": "evonvchat",
+  "name": "spanish-travel-ebook",
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "test:finance": "node --test tests/financeSessionSchedule.test.mjs tests/financeRunLogger.test.mjs",
-    "test:waitlist": "node --test tests/waitlist.test.mjs",
-    "test:community": "node --test tests/waitlist.test.mjs tests/communityIntro.test.mjs"
-  },
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.1075.0",
-    "firebase": "^12.14.0",
-    "firebase-admin": "^14.1.0",
-    "next": "14.2.5",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "rss-parser": "^3.13.0",
-    "stripe": "^14.25.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.0",
-    "autoprefixer": "^10.5.0",
-    "postcss": "^8.5.15",
-    "tailwindcss": "^4.3.0"
+    "audit": "node scripts/build.mjs --check-only",
+    "build": "node scripts/build.mjs",
+    "dev": "npm run build && node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "npm run build && node scripts/smoke-app.mjs"
   }
 }

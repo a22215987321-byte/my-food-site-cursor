@@ -1,64 +1,30 @@
-# EvonVChat
+# 西班牙語旅行必學句子
 
-www.evonvchat.com — 由 Cursor 管理。
+evonvchat.com 的正式電子書網站。網站保留原有 GitHub repository、Vercel project、`main` 部署分支與自訂網域連線，內容已改為無後端、無登入功能的純靜態網站。
 
-## 產品定位
-
-**EvonVChat 是一個即時社交聊天平台**，核心是「人與人之間的即時互動」：
-
-- 即時聊天（公共大廳、好友私訊、群組）
-- 好友系統（邀請、搜尋、狀態）
-- 動態消息（貼文、圖片、影片、按讚）
-- 個人檔案頁
-- 打賞（Stripe）
-- 螢幕分享直播（電影院）
-- AI 新聞（每日自動彙整 + 中文摘要 + 語音播報）
-- AI 陪伴角色（AI 爸爸／AI 媽媽，隨時可聊天）
-
-**不包含**語言學習／字典／單字卡功能——這些與「社交聊天」定位不符，已從產品中移除，讓核心體驗更聚焦。
-
-## 開發
+## 本機執行
 
 ```bash
 npm install
 npm run dev
 ```
 
-## AI 新聞功能
+Production build：
 
-`pages/api/ai-news.js` 會即時抓取多個公開 RSS 來源（TechCrunch AI、VentureBeat AI、MIT Technology Review、The Verge AI、AI News），合併、去重、依發布時間排序後取最新 20 則，並對每一則做：
+```bash
+npm run build
+npm start
+```
 
-1. **AI 摘要**：用詞頻＋首句加權的抽取式摘要演算法，從原文中挑出最具代表性的 1-2 句話，不需要任何付費 LLM API。
-2. **中文翻譯**：標題與摘要都會翻譯成繁體中文（透過翻譯服務），失敗時自動退回英文原文，不會讓整個功能掛掉。
+預設網址為 `http://localhost:3000`，也可將連接埠作為參數傳給伺服器腳本。
 
-其他設計考量：
+## 內容結構
 
-- 不需要任何 API 金鑰或資料庫，純抓取公開資源。
-- 翻譯請求有併發限制（同時最多 10 個），避免短時間內送出過多請求被擋。
-- 透過 HTTP `Cache-Control: s-maxage=3600, stale-while-revalidate=86400` 讓 Vercel 邊緣網路快取結果，兼顧「每日更新」與效能，也避免每次請求都重新跑一次翻譯流程。
-- `vercel.json` 設定了每日 00:00 UTC 的 Cron Job 主動打一次這個 API，確保使用者一早打開就有當天最新內容；同時把這個 API 的 `maxDuration` 設為 30 秒，讓翻譯有足夠時間完成。
+- `content/index.html`：電子書首頁與正文 HTML
+- `content/scene-gallery.html`：15 章場景圖頁 HTML
+- `styles/ebook.css`：原書版面與響應式閱讀樣式
+- `public/app.js`：頁碼、縮放、單／雙頁與列印控制
+- `public/assets/`：電子書所需的全部圖片
+- `scripts/build.mjs`：產生 `dist/` 並驗證本機路徑、大小寫及缺失資源
 
-## AI 語音報導
-
-AI 新聞頁面右上角有「🔊 語音播報全部」，每則新聞也有獨立的播放按鈕，會用瀏覽器內建的語音合成（Web Speech API）朗讀中文標題＋摘要。這樣使用者不用一直盯著螢幕看，可以邊聽邊做別的事。同樣不需要任何 API 金鑰，純瀏覽器原生功能。
-
-- 自動挑選語音時，會優先選「雲端／Natural／Online／Neural」等高品質語音，其次才是系統內建的本機語音，盡量避免選到最生硬的那一種。
-- 標題旁有一個語音選單，可以手動切換瀏覽器提供的所有中文語音，找一個自己聽起來最順耳的（不同瀏覽器/系統內建的語音音質差異很大，Windows 上用 Edge 瀏覽器通常會有比較自然的「Online (Natural)」語音可選）。
-
-## AI 陪伴角色（AI 爸爸／AI 媽媽）
-
-好友列表最上方新增「AI 陪伴」區塊，有兩個永遠在線的角色可以聊天：
-
-- **AI 爸爸**：穩重、鼓勵型語氣
-- **AI 媽媽**：溫暖、細膩關心型語氣
-
-技術設計：
-
-- 前端不會直接產生回覆，而是呼叫伺服器端的 `pages/api/ai-companion.js`。
-- **預設（不需要任何設定）**：用 `lib/aiCompanion.js` 的規則式引擎，依關鍵字判斷情境（問候、示愛、難過、疲累、開心、有成就、道晚安、感謝、理財、擔心、求助、提問、簡短含糊的輸入等），從對應角色的語氣模板中挑一句回覆，並避免連續兩次講同一句話。不依賴任何付費 API，但本質上聽不懂真正的語意，遇到規則沒覆蓋到的內容會答非所問。
-- **升級為真正的 AI 對話（可選）**：只要在 Vercel 專案設定環境變數 `GEMINI_API_KEY`（到 [Google AI Studio](https://aistudio.google.com/apikey) 免費申請），`ai-companion.js` 會自動改用 Google Gemini（`gemini-2.5-flash`）生成回覆，讓 AI 爸爸／媽媽真正理解上下文、給出貼切的回應；如果 Gemini 呼叫失敗（金鑰錯誤、額度用完、逾時等）會自動退回規則式引擎，不會讓聊天中斷或出現錯誤。設定完全不需要改任何程式碼。
-- 聊天記錄走跟真人好友私訊完全相同的 Firestore 路徑規則（`private_chats/{[uid, 對方id].sort().join('_')}/messages`），把 AI 角色當作固定的虛擬好友 ID（`aifather` / `aimother`），這樣現有的 Firestore 安全規則不需要另外調整。
-
-## 部署
-
-Push 到 `main` 後，Vercel 專案 `my-food-site-cursor` 會自動部署。
+舊登入、聊天室、會員、付款、AI、API 與舊路由均已移除。Vercel 會依 `vercel.json` 執行 build 並發布 `dist/`。

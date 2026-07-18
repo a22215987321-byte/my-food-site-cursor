@@ -1,20 +1,28 @@
 {
-  "framework": "nextjs",
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "crons": [
-    { "path": "/api/ai-news", "schedule": "0 0 * * *" },
-    { "path": "/api/finance-news", "schedule": "0 1 * * *" },
-    { "path": "/api/finance-daily-brief?refresh=1", "schedule": "30 16 * * *" },
-    { "path": "/api/finance-group-run?refresh=1", "schedule": "0 17 * * *" },
-    { "path": "/api/design-feed-run?refresh=1", "schedule": "30 18 * * *" }
-  ],
-  "functions": {
-    "pages/api/ai-news.js": { "maxDuration": 30 },
-    "pages/api/finance-news.js": { "maxDuration": 30 },
-    "pages/api/finance-daily-brief.js": { "maxDuration": 30 },
-    "pages/api/finance-group-run.js": { "maxDuration": 30 },
-    "pages/api/design-feed-run.js": { "maxDuration": 30 },
-    "pages/api/ai-companion.js": { "maxDuration": 25 }
-  }
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        }
+      ]
+    }
+  ]
 }
