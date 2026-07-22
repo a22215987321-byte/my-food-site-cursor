@@ -10,6 +10,8 @@ const copyPlan = [
   ["content/index.html", "index.html"],
   ["content/a1-vocabulary.html", "a1-vocabulary.html"],
   ["content/scene-gallery.html", "scene-gallery.html"],
+  ["content/scene-openers.html", "scene-openers.html"],
+  ["content/scene-dialogues.html", "scene-dialogues.html"],
   ["styles/ebook.css", "styles.css"],
   ["styles/a1-vocabulary.css", "a1-vocabulary.css"],
   ["public/app.js", "app.js"],
@@ -47,12 +49,14 @@ const auditFiles = checkOnly
       "content/index.html",
       "content/a1-vocabulary.html",
       "content/scene-gallery.html",
+      "content/scene-openers.html",
+      "content/scene-dialogues.html",
       "styles/ebook.css",
       "styles/a1-vocabulary.css",
       "public/app.js",
       "public/a1-vocabulary.js",
     ]
-  : ["index.html", "a1-vocabulary.html", "scene-gallery.html", "styles.css", "a1-vocabulary.css", "app.js", "a1-vocabulary.js"];
+  : ["index.html", "a1-vocabulary.html", "scene-gallery.html", "scene-openers.html", "scene-dialogues.html", "styles.css", "a1-vocabulary.css", "app.js", "a1-vocabulary.js"];
 
 const localPathPattern = /file:\/\/\/|\b[A-Za-z]:[\\/]|C:[\\/]Users[\\/]/i;
 const referencePattern = /(?:src|href)\s*=\s*["']([^"']+)["']|url\(\s*["']?([^"')]+)["']?\s*\)/gi;

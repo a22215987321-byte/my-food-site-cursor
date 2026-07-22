@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "sync:ebook": "node scripts/sync-ebook.mjs",
     "audit": "node scripts/build.mjs --check-only",
     "build": "node scripts/build.mjs",
     "dev": "npm run build && node scripts/serve.mjs",

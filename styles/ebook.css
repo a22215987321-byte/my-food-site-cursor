@@ -216,20 +216,13 @@ a.toolbar-button {
   position: absolute;
   z-index: 4;
   bottom: 6.5mm;
+  right: 12mm;
   display: flex;
   align-items: center;
   gap: 2.5mm;
   color: var(--muted);
   font-size: 8.5pt;
   font-weight: 700;
-}
-
-.sheet[data-side="recto"] .folio {
-  right: 12mm;
-}
-
-.sheet[data-side="verso"] .folio {
-  left: 12mm;
 }
 
 .folio::before {
@@ -892,6 +885,56 @@ a.toolbar-button {
   font-weight: 900;
 }
 
+.scene-usage-box {
+  padding: 3.2mm;
+  background: var(--teal-light);
+  border-left: 1.2mm solid var(--teal);
+  border-radius: 0 3mm 3mm 0;
+}
+
+.scene-usage-box h2 {
+  margin: 0 0 2.3mm;
+  color: var(--ink);
+  font-size: 10.5pt;
+}
+
+.scene-usage-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2.5mm;
+}
+
+.scene-usage-item {
+  min-width: 0;
+  padding: 2.3mm;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 2.2mm;
+}
+
+.scene-usage-phrase {
+  margin: 0;
+  color: var(--teal);
+  font-family: "Aptos", "Inter", "Helvetica Neue", Arial, sans-serif;
+  font-size: 8pt;
+  line-height: 1.28;
+  font-weight: 800;
+}
+
+.scene-usage-when {
+  margin: 1.4mm 0 0;
+  color: var(--text);
+  font-size: 6.8pt;
+  line-height: 1.4;
+}
+
+.scene-usage-when strong {
+  display: block;
+  margin-bottom: 0.5mm;
+  color: var(--ink);
+  font-size: 6.4pt;
+  letter-spacing: 0.08em;
+}
+
 .survival-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1074,6 +1117,161 @@ a.toolbar-button {
   color: var(--blue);
   font-size: 6.9pt;
   line-height: 1.4;
+}
+
+.scene-dialogue-page .page-main {
+  gap: 0;
+}
+
+.scene-dialogue-intro {
+  display: grid;
+  grid-template-columns: 32mm minmax(0, 1fr);
+  gap: 4mm;
+  align-items: center;
+  margin-bottom: 2mm;
+}
+
+.scene-dialogue-intro img {
+  display: block;
+  width: 32mm;
+  height: 24mm;
+  object-fit: cover;
+  border-radius: 3mm;
+}
+
+.scene-dialogue-intro .page-kicker {
+  margin-bottom: 1mm;
+  font-size: 6.8pt;
+}
+
+.scene-dialogue-intro h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16.5pt;
+  line-height: 1.22;
+}
+
+.scene-dialogue-intro div > p:last-child {
+  margin: 1.3mm 0 0;
+  color: var(--muted);
+  font-size: 6.9pt;
+  line-height: 1.4;
+}
+
+.scene-dialogue-guide {
+  display: flex;
+  justify-content: space-between;
+  gap: 3mm;
+  padding: 1.2mm 2.3mm;
+  color: var(--muted);
+  background: var(--cream);
+  border-radius: 999px;
+  font-size: 6.2pt;
+  font-weight: 800;
+}
+
+.scene-dialogue-guide span:last-child {
+  color: var(--teal);
+}
+
+.scene-chat {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1.15mm;
+  margin-top: 1.8mm;
+}
+
+.scene-chat-row {
+  display: flex;
+  width: 100%;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.scene-chat-row.right {
+  justify-content: flex-end;
+}
+
+.scene-chat-row.left {
+  justify-content: flex-start;
+}
+
+.scene-bubble {
+  max-width: 88%;
+  padding: 1.7mm 2.6mm 1.8mm;
+  background: #e8eef3;
+  border-left: 1.1mm solid var(--blue);
+  border-radius: 1.5mm 4mm 4mm 4mm;
+}
+
+.scene-chat-row.right .scene-bubble {
+  border-right: 1.1mm solid var(--teal);
+  border-left: 0;
+  border-radius: 4mm 1.5mm 4mm 4mm;
+}
+
+.scene-chat-row.jiayi .scene-bubble {
+  background: var(--teal-light);
+  border-right-color: var(--teal);
+}
+
+.scene-chat-row.carlos .scene-bubble {
+  background: #f8e7e0;
+  border-right-color: var(--terracotta);
+}
+
+.scene-speaker {
+  display: block;
+  margin-bottom: 0.45mm;
+  color: var(--blue);
+  font-size: 6pt;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.scene-chat-row.jiayi .scene-speaker {
+  color: var(--teal);
+}
+
+.scene-chat-row.carlos .scene-speaker {
+  color: var(--terracotta);
+}
+
+.scene-dialogue-es {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Aptos", "Inter", Arial, sans-serif;
+  font-size: 8.7pt;
+  line-height: 1.24;
+  font-weight: 780;
+}
+
+.scene-dialogue-zh {
+  margin: 0.45mm 0 0;
+  color: var(--muted);
+  font-size: 6.35pt;
+  line-height: 1.28;
+}
+
+.scene-learning-goal {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2.5mm;
+  align-items: start;
+  margin-top: 1.8mm;
+  padding: 1.8mm 2.5mm;
+  color: var(--ink);
+  background: #fff4d8;
+  border-left: 1mm solid var(--mustard);
+  border-radius: 0 3mm 3mm 0;
+  font-size: 6.4pt;
+  line-height: 1.4;
+}
+
+.scene-learning-goal strong {
+  color: #855900;
 }
 
 .dialogue-image-row {
@@ -1772,15 +1970,8 @@ details.answer summary {
 
   .folio {
     bottom: 22px;
-    font-size: 14px;
-  }
-
-  .sheet[data-side="recto"] .folio {
     right: 18px;
-  }
-
-  .sheet[data-side="verso"] .folio {
-    left: 18px;
+    font-size: 14px;
   }
 
   .page-kicker,
@@ -1903,6 +2094,7 @@ details.answer summary {
   .panel-grid,
   .icon-list,
   .goals-list,
+  .scene-usage-list,
   .survival-grid,
   .sentence-grid,
   .dialogue-grid,
@@ -1923,6 +2115,7 @@ details.answer summary {
   .sample-card,
   .copyright-box,
   .goals-box,
+  .scene-usage-box,
   .choice-box,
   .completion-box,
   .review-card,
@@ -1935,6 +2128,7 @@ details.answer summary {
   .panel h3,
   .sample-card .zh,
   .goals-box h2,
+  .scene-usage-box h2,
   .choice-box h3,
   .completion-box h3,
   .quick-review h3 {
@@ -1953,6 +2147,7 @@ details.answer summary {
   .route-copy span,
   .chapter-intro,
   .goals-list li,
+  .scene-usage-when,
   .survival-card .zh,
   .sentence-zh,
   .sentence-usage,
@@ -2109,6 +2304,80 @@ details.answer summary {
     max-width: calc(100% - 20px);
     padding: 7px 10px;
     font-size: 13px;
+  }
+
+  .scene-usage-list {
+    gap: 12px;
+  }
+
+  .scene-usage-item {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .scene-usage-phrase {
+    font-size: 18px;
+    line-height: 1.42;
+  }
+
+  .scene-usage-when strong {
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  .scene-dialogue-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .scene-dialogue-intro img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .scene-dialogue-intro .page-kicker {
+    font-size: 13px;
+  }
+
+  .scene-dialogue-intro h1 {
+    font-size: 28px;
+  }
+
+  .scene-dialogue-intro div > p:last-child,
+  .scene-dialogue-guide,
+  .scene-dialogue-zh,
+  .scene-learning-goal {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .scene-chat {
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .scene-bubble {
+    max-width: 94%;
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .scene-speaker {
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+
+  .scene-dialogue-es {
+    font-size: 19px;
+    line-height: 1.45;
+  }
+
+  .scene-learning-goal {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    margin-top: 16px;
+    padding: 16px;
   }
 
   .survival-page .survival-grid {

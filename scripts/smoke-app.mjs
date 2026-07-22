@@ -4,9 +4,20 @@ import vm from "node:vm";
 
 const appSource = fs.readFileSync("dist/app.js", "utf8");
 const htmlSource = fs.readFileSync("dist/index.html", "utf8");
+const openerSource = fs.readFileSync("dist/scene-openers.html", "utf8");
+const dialogueSource = fs.readFileSync("dist/scene-dialogues.html", "utf8");
+const ebookCss = fs.readFileSync("dist/styles.css", "utf8");
 const pageCount = (htmlSource.match(/<section class="[^"]*\bsheet\b/g) || []).length;
 
-assert.equal(pageCount, 26, "expected all 26 ebook preview pages");
+assert.equal(pageCount, 28, "expected all 28 ebook preview pages");
+assert.equal((openerSource.match(/class="sheet chapter-opener"/g) || []).length, 15, "expected 15 scene opener pages");
+assert.equal((dialogueSource.match(/class="sheet scene-dialogue-page"/g) || []).length, 15, "expected 15 scene dialogue pages");
+assert.match(htmlSource, /href="scene-openers\.html"/, "expected scene opener navigation");
+assert.match(htmlSource, /href="scene-dialogues\.html"/, "expected scene dialogue navigation");
+assert.match(ebookCss, /\.folio\s*\{[\s\S]*?right:\s*12mm;/, "expected right-aligned folios");
+assert.doesNotMatch(ebookCss, /\.sheet\[data-side="verso"\]\s+\.folio\s*\{[\s\S]*?left:/, "even folios must not move left");
+assert.match(ebookCss, /\.scene-usage-box\s*\{/, "expected scene usage card styles");
+assert.match(ebookCss, /\.scene-chat-row\.right\s*\{/, "expected right-side dialogue styles");
 
 function classList() {
   const values = new Set();

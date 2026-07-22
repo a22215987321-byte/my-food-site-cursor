@@ -22,6 +22,8 @@ npm start
 
 - `content/index.html`：電子書首頁與正文 HTML
 - `content/scene-gallery.html`：15 章場景圖頁 HTML
+- `content/scene-openers.html`：15 章場景首頁與句子使用時機 HTML
+- `content/scene-dialogues.html`：15 章整頁場景對話 HTML
 - `styles/ebook.css`：原書版面與響應式閱讀樣式
 - `public/app.js`：頁碼、縮放、單／雙頁與列印控制
 - `public/assets/`：電子書所需的全部圖片
