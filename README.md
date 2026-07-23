@@ -1,4 +1,4 @@
-# 西班牙語旅行必學句子
+# 兩個人的西班牙
 
 evonvchat.com 的正式電子書網站。網站保留原有 GitHub repository、Vercel project、`main` 部署分支與自訂網域連線，內容已改為無後端、無登入功能的純靜態網站。
 
