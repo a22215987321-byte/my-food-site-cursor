@@ -11,12 +11,17 @@ const pageCount = (htmlSource.match(/<section class="[^"]*\bsheet\b/g) || []).le
 
 assert.equal(pageCount, 28, "expected all 28 ebook preview pages");
 assert.equal((openerSource.match(/class="sheet chapter-opener"/g) || []).length, 15, "expected 15 scene opener pages");
+assert.equal((openerSource.match(/class="chapter-intro-paragraph"/g) || []).length, 30, "expected two story paragraphs on every scene opener");
+assert.equal((openerSource.match(/<h2>本幕核心句子｜先說這三句<\/h2>/g) || []).length, 15, "expected the revised core-sentence heading on every scene opener");
+assert.doesNotMatch(openerSource, /Carlos／嘉怡的右側對話怎麼用/, "old scene-usage heading must be removed");
 assert.equal((dialogueSource.match(/class="sheet scene-dialogue-page"/g) || []).length, 15, "expected 15 scene dialogue pages");
 assert.match(htmlSource, /href="scene-openers\.html"/, "expected scene opener navigation");
 assert.match(htmlSource, /href="scene-dialogues\.html"/, "expected scene dialogue navigation");
 assert.match(ebookCss, /\.folio\s*\{[\s\S]*?right:\s*12mm;/, "expected right-aligned folios");
 assert.doesNotMatch(ebookCss, /\.sheet\[data-side="verso"\]\s+\.folio\s*\{[\s\S]*?left:/, "even folios must not move left");
 assert.match(ebookCss, /\.scene-usage-box\s*\{/, "expected scene usage card styles");
+assert.match(ebookCss, /\.chapter-opener \.page-main\s*\{\s*gap:\s*0;/, "scene image and core sentences should share one continuous layout");
+assert.match(ebookCss, /\.scene-usage-list\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\);/, "expected three scene phrases to stack as rows");
 assert.match(ebookCss, /\.scene-chat-row\.right\s*\{/, "expected right-side dialogue styles");
 
 function classList() {
